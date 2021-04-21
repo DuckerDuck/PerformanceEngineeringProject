@@ -1,8 +1,4 @@
-#ifndef DATATYPE
-typedef float fluid;
-#else
-typedef DATATYPE fluid;
-#endif
+#include "solver.h"
 
 #define IX(i, j) ((i) + (N + 2) * (j))
 #define SWAP(x0, x)      \
@@ -20,11 +16,6 @@ typedef DATATYPE fluid;
 	}           \
 	}
 
-
-// #define XSTR(x) STR(x)
-// #define STR(x) #x
-
-// #pragma message "The value of ABC: " XSTR(DATATYPE)
 
 void add_source(int N, fluid *x, fluid *s, float dt)
 {

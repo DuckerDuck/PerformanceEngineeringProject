@@ -17,14 +17,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <GL/glut.h>
+#include "solver.h"
 
 /* macros */
-
-#ifndef DATATYPE
-typedef float fluid;
-#else
-typedef DATATYPE fluid;
-#endif
 
 #define IX(i, j) ((i) + (N + 2) * (j))
 
