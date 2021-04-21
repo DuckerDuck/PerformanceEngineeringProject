@@ -1,9 +1,9 @@
-CXX_FLAGS +=  -O3 -Wall -g
+CFLAGS +=  -O3 -Wall -g
 LFLAGS += -lGL -lGLU -lglut
 APPS = demo
 
 ifdef DATATYPE
-CXX_FLAGS += -D DATATYPE=$(DATATYPE)
+CFLAGS += -D DATATYPE=$(DATATYPE)
 endif
 
 
@@ -11,8 +11,8 @@ endif
 
 all: $(APPS)
 
-demo: demo.c solver.c
-	$(CXX) $(CXX_FLAGS)  -o $@ $^ $(LFLAGS)
+demo: demo.c solver.c io.c
+	$(CC) $(CFLAGS)  -o $@ $^ $(LFLAGS)
 
 .PHONY: clean
 clean:

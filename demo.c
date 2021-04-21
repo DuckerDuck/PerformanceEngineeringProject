@@ -4,6 +4,7 @@
   ----------------------------------------------------------------------
    Author : Jos Stam (jstam@aw.sgi.com)
    Creation Date : Jan 9 2003
+   Updated On : Apr 21 2021
 
    Description:
 
@@ -17,10 +18,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <GL/glut.h>
+
 #include "solver.h"
+#include "io.h"
 
 /* macros */
-
 #define IX(i, j) ((i) + (N + 2) * (j))
 
 /* external definitions (from solver.c) */
@@ -378,6 +380,8 @@ int main(int argc, char **argv)
 	if (!allocate_data())
 		exit(1);
 	clear_data();
+
+	save_to_disk("testfile.fluid", N, u, v, u_prev, v_prev, dens, dens_prev);
 
 	win_x = 512;
 	win_y = 512;

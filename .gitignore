@@ -1,5 +1,6 @@
-# Our binaries
+# Our files
 demo
+*.fluid
 
 # Prerequisites
 *.d
