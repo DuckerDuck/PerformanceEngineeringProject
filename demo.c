@@ -20,12 +20,18 @@
 
 /* macros */
 
+#ifndef DATATYPE
+typedef float fluid;
+#else
+typedef DATATYPE fluid;
+#endif
+
 #define IX(i, j) ((i) + (N + 2) * (j))
 
 /* external definitions (from solver.c) */
 
-extern void dens_step(int N, float *x, float *x0, float *u, float *v, float diff, float dt);
-extern void vel_step(int N, float *u, float *v, float *u0, float *v0, float visc, float dt);
+extern void dens_step(int N, fluid *x, fluid *x0, fluid *u, fluid *v, float diff, float dt);
+extern void vel_step(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, float visc, float dt);
 
 /* global variables */
 
@@ -34,8 +40,8 @@ static float dt, diff, visc;
 static float force, source;
 static int dvel;
 
-static float *u, *v, *u_prev, *v_prev;
-static float *dens, *dens_prev;
+static fluid *u, *v, *u_prev, *v_prev;
+static fluid *dens, *dens_prev;
 
 static int win_id;
 static int win_x, win_y;
@@ -78,12 +84,12 @@ static int allocate_data(void)
 {
 	int size = (N + 2) * (N + 2);
 
-	u = (float *)malloc(size * sizeof(float));
-	v = (float *)malloc(size * sizeof(float));
-	u_prev = (float *)malloc(size * sizeof(float));
-	v_prev = (float *)malloc(size * sizeof(float));
-	dens = (float *)malloc(size * sizeof(float));
-	dens_prev = (float *)malloc(size * sizeof(float));
+	u = (fluid *)malloc(size * sizeof(fluid));
+	v = (fluid *)malloc(size * sizeof(fluid));
+	u_prev = (fluid *)malloc(size * sizeof(fluid));
+	v_prev = (fluid *)malloc(size * sizeof(fluid));
+	dens = (fluid *)malloc(size * sizeof(fluid));
+	dens_prev = (fluid *)malloc(size * sizeof(fluid));
 
 	if (!u || !v || !u_prev || !v_prev || !dens || !dens_prev)
 	{
@@ -183,7 +189,7 @@ static void draw_density(void)
   ----------------------------------------------------------------------
 */
 
-static void get_from_UI(float *d, float *u, float *v)
+static void get_from_UI(fluid *d, fluid *u, fluid *v)
 {
 	int i, j, size = (N + 2) * (N + 2);
 

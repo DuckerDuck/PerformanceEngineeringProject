@@ -1,7 +1,13 @@
+#ifndef DATATYPE
+typedef float fluid;
+#else
+typedef DATATYPE fluid;
+#endif
+
 #define IX(i, j) ((i) + (N + 2) * (j))
 #define SWAP(x0, x)      \
 	{                    \
-		float *tmp = x0; \
+		fluid *tmp = x0; \
 		x0 = x;          \
 		x = tmp;         \
 	}
@@ -14,14 +20,20 @@
 	}           \
 	}
 
-void add_source(int N, float *x, float *s, float dt)
+
+// #define XSTR(x) STR(x)
+// #define STR(x) #x
+
+// #pragma message "The value of ABC: " XSTR(DATATYPE)
+
+void add_source(int N, fluid *x, fluid *s, float dt)
 {
 	int i, size = (N + 2) * (N + 2);
 	for (i = 0; i < size; i++)
 		x[i] += dt * s[i];
 }
 
-void set_bnd(int N, int b, float *x)
+void set_bnd(int N, int b, fluid *x)
 {
 	int i;
 
@@ -38,7 +50,7 @@ void set_bnd(int N, int b, float *x)
 	x[IX(N + 1, N + 1)] = 0.5f * (x[IX(N, N + 1)] + x[IX(N + 1, N)]);
 }
 
-void lin_solve(int N, int b, float *x, float *x0, float a, float c)
+void lin_solve(int N, int b, fluid *x, fluid *x0, float a, float c)
 {
 	int i, j, k;
 
@@ -51,13 +63,13 @@ void lin_solve(int N, int b, float *x, float *x0, float a, float c)
 	}
 }
 
-void diffuse(int N, int b, float *x, float *x0, float diff, float dt)
+void diffuse(int N, int b, fluid *x, fluid *x0, float diff, float dt)
 {
 	float a = dt * diff * N * N;
 	lin_solve(N, b, x, x0, a, 1 + 4 * a);
 }
 
-void advect(int N, int b, float *d, float *d0, float *u, float *v, float dt)
+void advect(int N, int b, fluid *d, fluid *d0, fluid *u, fluid *v, float dt)
 {
 	int i, j, i0, j0, i1, j1;
 	float x, y, s0, t0, s1, t1, dt0;
@@ -88,7 +100,7 @@ void advect(int N, int b, float *d, float *d0, float *u, float *v, float dt)
 	set_bnd(N, b, d);
 }
 
-void project(int N, float *u, float *v, float *p, float *div)
+void project(int N, fluid *u, fluid *v, fluid *p, fluid *div)
 {
 	int i, j;
 
@@ -109,7 +121,7 @@ void project(int N, float *u, float *v, float *p, float *div)
 	set_bnd(N, 2, v);
 }
 
-void dens_step(int N, float *x, float *x0, float *u, float *v, float diff, float dt)
+void dens_step(int N, fluid *x, fluid *x0, fluid *u, fluid *v, float diff, float dt)
 {
 	add_source(N, x, x0, dt);
 	SWAP(x0, x);
@@ -118,7 +130,7 @@ void dens_step(int N, float *x, float *x0, float *u, float *v, float diff, float
 	advect(N, 0, x, x0, u, v, dt);
 }
 
-void vel_step(int N, float *u, float *v, float *u0, float *v0, float visc, float dt)
+void vel_step(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, float visc, float dt)
 {
 	add_source(N, u, u0, dt);
 	add_source(N, v, v0, dt);
