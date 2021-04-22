@@ -16,7 +16,7 @@
   {                                      \
     for (int j = 0; j < N + 2; j++)      \
     {                                    \
-      fprintf(fp, "%.4f ", x[IX(i, j)]); \
+      fprintf(fp, "%.10f ", x[IX(i, j)]); \
     }                                    \
     fprintf(fp, "\n");                   \
   }
@@ -62,10 +62,19 @@ void read_from_disk(char *filename, int N, fluid *u, fluid *v, fluid *u_prev, fl
   float val;
 
   fp = fopen(filename, "r");
+  if (fp == NULL) {
+    printf("Could not read file \"%s\"!", filename);
+    return;
+  }
   read = fscanf(fp, "N: %d\n", &file_N);
   if (read != 1)
   {
     printf("Could not read value of N from fluid file!\n");
+    return;
+  }
+
+  if (file_N != N) {
+    printf("N parameter of file does not match program config!\n");
     return;
   }
 

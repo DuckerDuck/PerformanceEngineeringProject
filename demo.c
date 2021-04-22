@@ -361,7 +361,7 @@ int main(int argc, char **argv)
 		visc = 0.0f;
 		force = 5.0f;
 		source = 100.0f;
-		fprintf(stderr, "Using defaults : N=%d dt=%g diff=%g visc=%g force = %g source=%g\n",
+		fprintf(stderr, "Using defaults : N=%d dt=%g diff=%g visc=%g force=%g source=%g\n",
 				N, dt, diff, visc, force, source);
 	}
 	else
