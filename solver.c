@@ -1,6 +1,5 @@
 #include "solver.h"
 
-#define IX(i, j) ((i) + (N + 2) * (j))
 #define SWAP(x0, x)      \
 	{                    \
 		fluid *tmp = x0; \

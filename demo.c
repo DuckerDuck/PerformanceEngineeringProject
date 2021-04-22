@@ -22,8 +22,6 @@
 #include "solver.h"
 #include "io.h"
 
-/* macros */
-#define IX(i, j) ((i) + (N + 2) * (j))
 
 /* external definitions (from solver.c) */
 
@@ -246,6 +244,14 @@ static void key_func(unsigned char key, int x, int y)
 	case 'V':
 		dvel = !dvel;
 		break;
+	case 's':
+	case 'S':
+		save_to_disk("state.fluid", N, u, v, u_prev, v_prev, dens, dens_prev);
+		break;
+	case 'r':
+	case 'R':
+		read_from_disk("state.fluid", N, u, v, u_prev, v_prev, dens, dens_prev);
+		break;
 	}
 }
 
@@ -374,14 +380,14 @@ int main(int argc, char **argv)
 	printf("\t Toggle density/velocity display with the 'v' key\n");
 	printf("\t Clear the simulation by pressing the 'c' key\n");
 	printf("\t Quit by pressing the 'q' key\n");
+	printf("\t Save state of the simulation by pressing the 's' key\n");
+	printf("\t Read state of the simulation by pressing the 'r' key\n");
 
 	dvel = 0;
 
 	if (!allocate_data())
 		exit(1);
 	clear_data();
-
-	save_to_disk("testfile.fluid", N, u, v, u_prev, v_prev, dens, dens_prev);
 
 	win_x = 512;
 	win_y = 512;
