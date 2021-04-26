@@ -12,9 +12,9 @@
 #include "solver.h"
 
 #define WRITE(x)                         \
-  for (int i = 0; i < N + 2; i++)        \
+  for (int i = 0; i < N.w + 2; i++)        \
   {                                      \
-    for (int j = 0; j < N + 2; j++)      \
+    for (int j = 0; j < N.h + 2; j++)      \
     {                                    \
       fprintf(fp, "%.10f ", x[IX(i, j)]); \
     }                                    \
@@ -22,9 +22,9 @@
   }
 
 #define READ(x)                                             \
-  for (int i = 0; i < N + 2; i++)                           \
+  for (int i = 0; i < file_W + 2; i++)                           \
   {                                                         \
-    for (int j = 0; j < N + 2; j++)                         \
+    for (int j = 0; j < file_H + 2; j++)                         \
     {                                                       \
       read = fscanf(fp, "%f ", &val);                       \
       if (read != 1)                                        \
@@ -37,12 +37,12 @@
     read = fscanf(fp, "\n");                                       \
   }
 
-void save_to_disk(char *filename, int N, fluid *u, fluid *v, fluid *u_prev, fluid *v_prev, fluid *dens, fluid *dens_prev)
+void save_to_disk(char *filename, grid_size N, fluid *u, fluid *v, fluid *u_prev, fluid *v_prev, fluid *dens, fluid *dens_prev)
 {
   FILE *fp;
 
   fp = fopen(filename, "w+");
-  fprintf(fp, "N: %d\n", N);
+  fprintf(fp, "N: %d, %d\n", N.w, N.h);
 
   WRITE(u);
   WRITE(u_prev);
@@ -54,10 +54,11 @@ void save_to_disk(char *filename, int N, fluid *u, fluid *v, fluid *u_prev, flui
   fclose(fp);
 }
 
-void read_from_disk(char *filename, int N, fluid *u, fluid *v, fluid *u_prev, fluid *v_prev, fluid *dens, fluid *dens_prev)
+void read_from_disk(char *filename, grid_size N, fluid *u, fluid *v, fluid *u_prev, fluid *v_prev, fluid *dens, fluid *dens_prev)
 {
   FILE *fp;
-  int file_N = -1;
+  int file_W = -1;
+  int file_H = -1;
   int read = 0;
   float val;
 
@@ -66,15 +67,15 @@ void read_from_disk(char *filename, int N, fluid *u, fluid *v, fluid *u_prev, fl
     printf("Could not read file \"%s\"!", filename);
     return;
   }
-  read = fscanf(fp, "N: %d\n", &file_N);
-  if (read != 1)
+  read = fscanf(fp, "N: %d, %d\n", &file_W, &file_H);
+  if (read != 2)
   {
     printf("Could not read value of N from fluid file!\n");
     return;
   }
 
-  if (file_N != N) {
-    printf("N parameter of file does not match program config!\n");
+  if (file_W > N.w || file_H > N.h) {
+    printf("W and H parameters are bigger than current program config!\n");
     return;
   }
 

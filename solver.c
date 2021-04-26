@@ -7,40 +7,42 @@
 		x = tmp;         \
 	}
 #define FOR_EACH_CELL            \
-	for (i = 1; i <= N; i++)     \
+	for (i = 1; i <= N.w; i++)     \
 	{                            \
-		for (j = 1; j <= N; j++) \
+		for (j = 1; j <= N.h; j++) \
 		{
 #define END_FOR \
 	}           \
 	}
 
 
-void add_source(int N, fluid *x, fluid *s, float dt)
+void add_source(grid_size N, fluid *x, fluid *s, float dt)
 {
-	int i, size = (N + 2) * (N + 2);
+	int i, size = (N.w + 2) * (N.h + 2);
 	for (i = 0; i < size; i++)
 		x[i] += dt * s[i];
 }
 
-void set_bnd(int N, int b, fluid *x)
+void set_bnd(grid_size N, int b, fluid *x)
 {
-	int i;
+	int i, j;
 
-	for (i = 1; i <= N; i++)
+	for (i = 1; i <= N.w; i++)
 	{
-		x[IX(0, i)] = b == 1 ? -x[IX(1, i)] : x[IX(1, i)];
-		x[IX(N + 1, i)] = b == 1 ? -x[IX(N, i)] : x[IX(N, i)];
 		x[IX(i, 0)] = b == 2 ? -x[IX(i, 1)] : x[IX(i, 1)];
-		x[IX(i, N + 1)] = b == 2 ? -x[IX(i, N)] : x[IX(i, N)];
+		x[IX(i, N.h + 1)] = b == 2 ? -x[IX(i, N.h)] : x[IX(i, N.h)];
+	}
+	for (j = 1; j <= N.h; j++) {
+		x[IX(0, j)] = b == 1 ? -x[IX(1, j)] : x[IX(1, j)];
+		x[IX(N.w + 1, j)] = b == 1 ? -x[IX(N.w, j)] : x[IX(N.w, j)];
 	}
 	x[IX(0, 0)] = 0.5f * (x[IX(1, 0)] + x[IX(0, 1)]);
-	x[IX(0, N + 1)] = 0.5f * (x[IX(1, N + 1)] + x[IX(0, N)]);
-	x[IX(N + 1, 0)] = 0.5f * (x[IX(N, 0)] + x[IX(N + 1, 1)]);
-	x[IX(N + 1, N + 1)] = 0.5f * (x[IX(N, N + 1)] + x[IX(N + 1, N)]);
+	x[IX(0, N.h + 1)] = 0.5f * (x[IX(1, N.h + 1)] + x[IX(0, N.h)]);
+	x[IX(N.w + 1, 0)] = 0.5f * (x[IX(N.w, 0)] + x[IX(N.w + 1, 1)]);
+	x[IX(N.w + 1, N.h + 1)] = 0.5f * (x[IX(N.w, N.h + 1)] + x[IX(N.w + 1, N.h)]);
 }
 
-void lin_solve(int N, int b, fluid *x, fluid *x0, float a, float c)
+void lin_solve(grid_size N, int b, fluid *x, fluid *x0, float a, float c)
 {
 	int i, j, k;
 
@@ -53,31 +55,32 @@ void lin_solve(int N, int b, fluid *x, fluid *x0, float a, float c)
 	}
 }
 
-void diffuse(int N, int b, fluid *x, fluid *x0, float diff, float dt)
+void diffuse(grid_size N, int b, fluid *x, fluid *x0, float diff, float dt)
 {
-	float a = dt * diff * N * N;
+	float a = dt * diff * N.w * N.h;
 	lin_solve(N, b, x, x0, a, 1 + 4 * a);
 }
 
-void advect(int N, int b, fluid *d, fluid *d0, fluid *u, fluid *v, float dt)
+void advect(grid_size N, int b, fluid *d, fluid *d0, fluid *u, fluid *v, float dt)
 {
 	int i, j, i0, j0, i1, j1;
-	float x, y, s0, t0, s1, t1, dt0;
+	float x, y, s0, t0, s1, t1, dt0, dt1;
 
-	dt0 = dt * N;
+	dt0 = dt * N.w;
+	dt1 = dt * N.h;
 	FOR_EACH_CELL
 	x = i - dt0 * u[IX(i, j)];
-	y = j - dt0 * v[IX(i, j)];
+	y = j - dt1 * v[IX(i, j)];
 	if (x < 0.5f)
 		x = 0.5f;
-	if (x > N + 0.5f)
-		x = N + 0.5f;
+	if (x > N.w + 0.5f)
+		x = N.w + 0.5f;
 	i0 = (int)x;
 	i1 = i0 + 1;
 	if (y < 0.5f)
 		y = 0.5f;
-	if (y > N + 0.5f)
-		y = N + 0.5f;
+	if (y > N.h + 0.5f)
+		y = N.h + 0.5f;
 	j0 = (int)y;
 	j1 = j0 + 1;
 	s1 = x - i0;
@@ -90,12 +93,12 @@ void advect(int N, int b, fluid *d, fluid *d0, fluid *u, fluid *v, float dt)
 	set_bnd(N, b, d);
 }
 
-void project(int N, fluid *u, fluid *v, fluid *p, fluid *div)
+void project(grid_size N, fluid *u, fluid *v, fluid *p, fluid *div)
 {
 	int i, j;
 
 	FOR_EACH_CELL
-	div[IX(i, j)] = -0.5f * (u[IX(i + 1, j)] - u[IX(i - 1, j)] + v[IX(i, j + 1)] - v[IX(i, j - 1)]) / N;
+	div[IX(i, j)] = -0.5f * ( ((u[IX(i + 1, j)] - u[IX(i - 1, j)]) / N.w)  + ((v[IX(i, j + 1)] - v[IX(i, j - 1)]) / N.h) );
 	p[IX(i, j)] = 0;
 	END_FOR
 	set_bnd(N, 0, div);
@@ -104,14 +107,14 @@ void project(int N, fluid *u, fluid *v, fluid *p, fluid *div)
 	lin_solve(N, 0, p, div, 1, 4);
 
 	FOR_EACH_CELL
-	u[IX(i, j)] -= 0.5f * N * (p[IX(i + 1, j)] - p[IX(i - 1, j)]);
-	v[IX(i, j)] -= 0.5f * N * (p[IX(i, j + 1)] - p[IX(i, j - 1)]);
+	u[IX(i, j)] -= 0.5f * N.w * (p[IX(i + 1, j)] - p[IX(i - 1, j)]);
+	v[IX(i, j)] -= 0.5f * N.h * (p[IX(i, j + 1)] - p[IX(i, j - 1)]);
 	END_FOR
 	set_bnd(N, 1, u);
 	set_bnd(N, 2, v);
 }
 
-void dens_step(int N, fluid *x, fluid *x0, fluid *u, fluid *v, float diff, float dt)
+void dens_step(grid_size N, fluid *x, fluid *x0, fluid *u, fluid *v, float diff, float dt)
 {
 	add_source(N, x, x0, dt);
 	SWAP(x0, x);
@@ -120,7 +123,7 @@ void dens_step(int N, fluid *x, fluid *x0, fluid *u, fluid *v, float diff, float
 	advect(N, 0, x, x0, u, v, dt);
 }
 
-void vel_step(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, float visc, float dt)
+void vel_step(grid_size N, fluid *u, fluid *v, fluid *u0, fluid *v0, float visc, float dt)
 {
 	add_source(N, u, u0, dt);
 	add_source(N, v, v0, dt);

@@ -25,12 +25,12 @@
 
 /* external definitions (from solver.c) */
 
-extern void dens_step(int N, fluid *x, fluid *x0, fluid *u, fluid *v, float diff, float dt);
-extern void vel_step(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, float visc, float dt);
+extern void dens_step(grid_size N, fluid *x, fluid *x0, fluid *u, fluid *v, float diff, float dt);
+extern void vel_step(grid_size N, fluid *u, fluid *v, fluid *u0, fluid *v0, float visc, float dt);
 
 /* global variables */
 
-static int N;
+static grid_size N;
 static float dt, diff, visc;
 static float force, source;
 static int dvel;
@@ -67,7 +67,7 @@ static void free_data(void)
 
 static void clear_data(void)
 {
-	int i, size = (N + 2) * (N + 2);
+	int i, size = (N.w + 2) * (N.h + 2);
 
 	for (i = 0; i < size; i++)
 	{
@@ -77,7 +77,7 @@ static void clear_data(void)
 
 static int allocate_data(void)
 {
-	int size = (N + 2) * (N + 2);
+	int size = (N.w + 2) * (N.h + 2);
 
 	u = (fluid *)malloc(size * sizeof(fluid));
 	v = (fluid *)malloc(size * sizeof(fluid));
@@ -119,19 +119,20 @@ static void post_display(void)
 static void draw_velocity(void)
 {
 	int i, j;
-	float x, y, h;
+	float x, y, h, w;
 
-	h = 1.0f / N;
+	h = 1.0f / N.h;
+	w = 1.0f / N.w;
 
 	glColor3f(1.0f, 1.0f, 1.0f);
 	glLineWidth(1.0f);
 
 	glBegin(GL_LINES);
 
-	for (i = 1; i <= N; i++)
+	for (i = 1; i <= N.w; i++)
 	{
-		x = (i - 0.5f) * h;
-		for (j = 1; j <= N; j++)
+		x = (i - 0.5f) * w;
+		for (j = 1; j <= N.h; j++)
 		{
 			y = (j - 0.5f) * h;
 
@@ -146,16 +147,17 @@ static void draw_velocity(void)
 static void draw_density(void)
 {
 	int i, j;
-	float x, y, h, d00, d01, d10, d11;
+	float x, y, w, h, d00, d01, d10, d11;
 
-	h = 1.0f / N;
+	h = 1.0f / N.h;
+	w = 1.0f / N.w;
 
 	glBegin(GL_QUADS);
 
-	for (i = 0; i <= N; i++)
+	for (i = 0; i <= N.w; i++)
 	{
-		x = (i - 0.5f) * h;
-		for (j = 0; j <= N; j++)
+		x = (i - 0.5f) * w;
+		for (j = 0; j <= N.h; j++)
 		{
 			y = (j - 0.5f) * h;
 
@@ -167,9 +169,9 @@ static void draw_density(void)
 			glColor3f(d00, d00, d00);
 			glVertex2f(x, y);
 			glColor3f(d10, d10, d10);
-			glVertex2f(x + h, y);
+			glVertex2f(x + w, y);
 			glColor3f(d11, d11, d11);
-			glVertex2f(x + h, y + h);
+			glVertex2f(x + w, y + h);
 			glColor3f(d01, d01, d01);
 			glVertex2f(x, y + h);
 		}
@@ -186,7 +188,7 @@ static void draw_density(void)
 
 static void get_from_UI(fluid *d, fluid *u, fluid *v)
 {
-	int i, j, size = (N + 2) * (N + 2);
+	int i, j, size = (N.w + 2) * (N.h + 2);
 
 	for (i = 0; i < size; i++)
 	{
@@ -196,10 +198,10 @@ static void get_from_UI(fluid *d, fluid *u, fluid *v)
 	if (!mouse_down[0] && !mouse_down[2])
 		return;
 
-	i = (int)((mx / (float)win_x) * N + 1);
-	j = (int)(((win_y - my) / (float)win_y) * N + 1);
+	i = (int)((mx / (float)win_x) * N.w + 1);
+	j = (int)(((win_y - my) / (float)win_y) * N.h + 1);
 
-	if (i < 1 || i > N || j < 1 || j > N)
+	if (i < 1 || i > N.w || j < 1 || j > N.h)
 		return;
 
 	if (mouse_down[0])
@@ -340,11 +342,12 @@ int main(int argc, char **argv)
 {
 	glutInit(&argc, argv);
 
-	if (argc != 1 && argc != 7)
+	if (argc != 1 && argc != 8)
 	{
 		fprintf(stderr, "usage : %s N dt diff visc force source\n", argv[0]);
 		fprintf(stderr, "where:\n");
-		fprintf(stderr, "\t N      : grid resolution\n");
+		fprintf(stderr, "\t W      : grid width\n");
+		fprintf(stderr, "\t H      : grid height\n");
 		fprintf(stderr, "\t dt     : time step\n");
 		fprintf(stderr, "\t diff   : diffusion rate of the density\n");
 		fprintf(stderr, "\t visc   : viscosity of the fluid\n");
@@ -355,23 +358,25 @@ int main(int argc, char **argv)
 
 	if (argc == 1)
 	{
-		N = 64;
+		N.w = 1280;
+		N.h = 720;
 		dt = 0.1f;
 		diff = 0.0f;
 		visc = 0.0f;
 		force = 5.0f;
 		source = 100.0f;
-		fprintf(stderr, "Using defaults : N=%d dt=%g diff=%g visc=%g force=%g source=%g\n",
-				N, dt, diff, visc, force, source);
+		fprintf(stderr, "Using defaults : W=%d H=%d dt=%g diff=%g visc=%g force=%g source=%g\n",
+				N.w, N.h, dt, diff, visc, force, source);
 	}
 	else
 	{
-		N = atoi(argv[1]);
-		dt = atof(argv[2]);
-		diff = atof(argv[3]);
-		visc = atof(argv[4]);
-		force = atof(argv[5]);
-		source = atof(argv[6]);
+		N.w = atoi(argv[1]);
+		N.h = atoi(argv[2]);
+		dt = atof(argv[3]);
+		diff = atof(argv[4]);
+		visc = atof(argv[5]);
+		force = atof(argv[6]);
+		source = atof(argv[7]);
 	}
 
 	printf("\n\nHow to use this demo:\n\n");
@@ -389,8 +394,8 @@ int main(int argc, char **argv)
 		exit(1);
 	clear_data();
 
-	win_x = 512;
-	win_y = 512;
+	win_x = N.w;
+	win_y = N.h;
 	open_glut_window();
 
 	glutMainLoop();
