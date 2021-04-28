@@ -27,11 +27,13 @@ void set_bnd(int N, int b, fluid *x)
 void lin_solve(int N, int b, fluid *x, fluid *x0, float a, float c)
 {
 	int i, j, k;
+	fluid tmp = 0;
 
 	for (k = 0; k < 20; k++)
 	{
 		FOR_EACH_CELL
-		x[IX(i, j)] = (x0[IX(i, j)] + a * (x[IX(i - 1, j)] + x[IX(i + 1, j)] + x[IX(i, j - 1)] + x[IX(i, j + 1)])) / c;
+		tmp = (x0[IX(i, j)] + a * (x[IX(i - 1, j)] + x[IX(i + 1, j)] + x[IX(i, j - 1)] + x[IX(i, j + 1)]));
+		x[IX(i, j)] = tmp / c;
 		END_FOR
 		set_bnd(N, b, x);
 	}
