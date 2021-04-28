@@ -122,35 +122,28 @@ static void set_random_state()
 	END_FOR
 }
 
-static void benchmark(char *start_state, int file_N)
+static void benchmark(int file_N)
 {
 	double start_time, end_time, total_time;
-	int random = 0;
 	total_time = 0;
 	N = file_N;
+
 	if (u)
-	{
 		free_data();
-	}
-	if (!allocate_data())
-	{
+	
+	if (!allocate_data()) {
 		fprintf(stderr, "Could not allocate data for run\n");
+		return;
 	}
+	
 	clear_data();
 
-	if (strcmp(start_state, "random") == 0) {
-		random = 1;
-	}
-
-	printf("Start state: %s @ N=%d\n", start_state, N);
+	printf("Grid size: %d\n", N);
 
 	for (int r = 0; r < runs; r++)
 	{	
-		if (random) {
-			set_random_state();
-		} else {
-			read_from_disk(start_state, file_N, u, v, u_prev, v_prev, dens, dens_prev);
-		}
+		set_random_state();
+		// read_from_disk(start_state, file_N, u, v, u_prev, v_prev, dens, dens_prev);
 
 		start_time = get_time();
 		for (int s = 0; s < steps; s++)
@@ -168,11 +161,10 @@ static void benchmark(char *start_state, int file_N)
 int main(int argc, char **argv)
 {
 
-	if (argc != 1 && argc != 9)
+	if (argc != 1 && argc != 8)
 	{
 		fprintf(stderr, "usage : %s N dt diff visc force source\n", argv[0]);
 		fprintf(stderr, "where:\n");
-		fprintf(stderr, "\t N      : grid resolution\n");
 		fprintf(stderr, "\t dt     : time step\n");
 		fprintf(stderr, "\t diff   : diffusion rate of the density\n");
 		fprintf(stderr, "\t visc   : viscosity of the fluid\n");
@@ -185,7 +177,6 @@ int main(int argc, char **argv)
 
 	if (argc == 1)
 	{
-		N = 64;
 		dt = 0.1f;
 		diff = 0.0f;
 		visc = 0.0f;
@@ -196,33 +187,21 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-		N = atoi(argv[1]);
-		dt = atof(argv[2]);
-		diff = atof(argv[3]);
-		visc = atof(argv[4]);
-		force = atof(argv[5]);
-		source = atof(argv[6]);
-		steps = atoi(argv[7]);
-		runs = atoi(argv[8]);
+		dt = atof(argv[1]);
+		diff = atof(argv[2]);
+		visc = atof(argv[3]);
+		force = atof(argv[4]);
+		source = atof(argv[5]);
+		steps = atoi(argv[6]);
+		runs = atoi(argv[7]);
 	}
 
-	printf("Arguments : N=%d dt=%g diff=%g visc=%g force=%g source=%g steps=%d runs=%d\n",
-		   N, dt, diff, visc, force, source, steps, runs);
+	printf("Arguments: dt=%g diff=%g visc=%g force=%g source=%g steps=%d runs=%d\n",
+		   dt, diff, visc, force, source, steps, runs);
 
-
-	benchmark("inputs/32.fluid", 32);
-	benchmark("random", 32);
-	benchmark("inputs/64.fluid", 64);
-	benchmark("random", 64);
-	benchmark("inputs/96.fluid", 96);
-	benchmark("random", 96);
-	benchmark("inputs/128.fluid", 128);
-	benchmark("random", 128);
-	benchmark("inputs/256.fluid", 256);
-	benchmark("random", 256);
-	benchmark("inputs/512.fluid", 512);
-	benchmark("random", 512);
-
+	for (int i = 32; i <= 512; i += 64)
+		benchmark(i);
+	
 	free_data();
 
 	exit(0);
