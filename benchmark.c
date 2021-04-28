@@ -138,7 +138,7 @@ static void benchmark(int file_N)
 	
 	clear_data();
 
-	printf("Grid size: %d\n", N);
+	printf("N: %d, ", N);
 
 	for (int r = 0; r < runs; r++)
 	{	
@@ -155,7 +155,7 @@ static void benchmark(int file_N)
 	}
 
 	double step_time_s = (total_time / (runs * steps));
-	printf("\tTotal time: %lf s, time per step: %lf ms, frames per second: %lf \n", total_time, step_time_s * 1e3, 1.0 / step_time_s);
+	printf("total: %lf s, time per step: %lf ms, frames per second: %lf \n", total_time, step_time_s * 1e3, 1.0 / step_time_s);
 }
 
 int main(int argc, char **argv)
@@ -199,7 +199,7 @@ int main(int argc, char **argv)
 	printf("Arguments: dt=%g diff=%g visc=%g force=%g source=%g steps=%d runs=%d\n",
 		   dt, diff, visc, force, source, steps, runs);
 
-	for (int i = 32; i <= 512; i += 64)
+	for (int i = 128; i <= 1024; i += 64)
 		benchmark(i);
 	
 	free_data();
