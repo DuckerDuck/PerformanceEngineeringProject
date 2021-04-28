@@ -1,6 +1,6 @@
 # Our files
 demo
-*.fluid
+benchmark
 
 # Prerequisites
 *.d
