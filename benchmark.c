@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <string.h>
 
 #include "solver.h"
 #include "io.h"
@@ -40,9 +41,9 @@ static int runs;
 // Return number of seconds since unix Epoch
 double get_time()
 {
-    struct timeval t;
-    gettimeofday(&t, NULL);
-    return t.tv_sec + t.tv_usec*1e-6;
+	struct timeval t;
+	gettimeofday(&t, NULL);
+	return t.tv_sec + t.tv_usec * 1e-6;
 }
 
 static void free_data(void)
@@ -97,24 +98,59 @@ static void step(void)
 	dens_step(N, dens, dens_prev, u, v, diff, dt);
 }
 
-static void benchmark(char* start_state, int file_N)
+float random_float(float min, float max)
+{
+	float number;
+	number = (float)rand() / (float)(RAND_MAX / (max - min));
+	number += min;
+	return number;
+}
+
+static void set_random_state()
+{
+	int i, j;
+	const float min = -1;
+	const float max = 1;
+
+	FOR_EACH_CELL
+		u[IX(i, j)] = random_float(min, max);
+		v[IX(i, j)] = random_float(min, max);
+		u_prev[IX(i, j)] = random_float(min, max);
+		v_prev[IX(i, j)] = random_float(min, max);
+		dens[IX(i, j)] = random_float(min * 10, max * 10);
+		dens_prev[IX(i, j)] = random_float(min * 10, max * 10);
+	END_FOR
+}
+
+static void benchmark(char *start_state, int file_N)
 {
 	double start_time, end_time, total_time;
+	int random = 0;
 	total_time = 0;
 	N = file_N;
-	if (u) {
+	if (u)
+	{
 		free_data();
 	}
-	if (!allocate_data()) {
+	if (!allocate_data())
+	{
 		fprintf(stderr, "Could not allocate data for run\n");
 	}
 	clear_data();
 
-	printf("Start state: %s\n", start_state);
-	
+	if (strcmp(start_state, "random") == 0) {
+		random = 1;
+	}
+
+	printf("Start state: %s @ N=%d\n", start_state, N);
+
 	for (int r = 0; r < runs; r++)
-	{
-		read_from_disk(start_state, file_N, u, v, u_prev, v_prev, dens, dens_prev);
+	{	
+		if (random) {
+			set_random_state();
+		} else {
+			read_from_disk(start_state, file_N, u, v, u_prev, v_prev, dens, dens_prev);
+		}
 
 		start_time = get_time();
 		for (int s = 0; s < steps; s++)
@@ -125,7 +161,7 @@ static void benchmark(char* start_state, int file_N)
 		total_time += (end_time - start_time);
 	}
 
-	double step_time_s = (total_time/(runs*steps));
+	double step_time_s = (total_time / (runs * steps));
 	printf("\tTotal time: %lf s, time per step: %lf ms, frames per second: %lf \n", total_time, step_time_s * 1e3, 1.0 / step_time_s);
 }
 
@@ -171,15 +207,22 @@ int main(int argc, char **argv)
 	}
 
 	printf("Arguments : N=%d dt=%g diff=%g visc=%g force=%g source=%g steps=%d runs=%d\n",
-			N, dt, diff, visc, force, source, steps, runs);
+		   N, dt, diff, visc, force, source, steps, runs);
+
 
 	benchmark("inputs/32.fluid", 32);
+	benchmark("random", 32);
 	benchmark("inputs/64.fluid", 64);
+	benchmark("random", 64);
 	benchmark("inputs/96.fluid", 96);
+	benchmark("random", 96);
 	benchmark("inputs/128.fluid", 128);
+	benchmark("random", 128);
 	benchmark("inputs/256.fluid", 256);
+	benchmark("random", 256);
 	benchmark("inputs/512.fluid", 512);
-	
+	benchmark("random", 512);
+
 	free_data();
 
 	exit(0);

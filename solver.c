@@ -1,21 +1,5 @@
 #include "solver.h"
 
-#define SWAP(x0, x)      \
-	{                    \
-		fluid *tmp = x0; \
-		x0 = x;          \
-		x = tmp;         \
-	}
-#define FOR_EACH_CELL            \
-	for (i = 1; i <= N; i++)     \
-	{                            \
-		for (j = 1; j <= N; j++) \
-		{
-#define END_FOR \
-	}           \
-	}
-
-
 void add_source(int N, fluid *x, fluid *s, float dt)
 {
 	int i, size = (N + 2) * (N + 2);
