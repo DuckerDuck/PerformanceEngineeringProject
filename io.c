@@ -73,8 +73,8 @@ void read_from_disk(char *filename, int N, fluid *u, fluid *v, fluid *u_prev, fl
     return;
   }
 
-  if (file_N != N) {
-    printf("N parameter of file does not match program config!\n");
+  if (file_N > N) {
+    printf("W and H parameters are bigger than current program config!\n");
     return;
   }
 
