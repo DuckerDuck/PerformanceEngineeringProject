@@ -6,4 +6,6 @@ Code for this implementation is based on work by Jos Stam:
 Original source code can be found here:
 http://www.dgp.toronto.edu/people/stam/reality/Research/zip/CDROM_GDC03.zip
 
-
+# Requirements
+- freeglut3-dev
+- libgl-dev
