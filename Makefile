@@ -1,6 +1,6 @@
 CFLAGS += -O3 -Wall -g
 LFLAGS += -lGL -lGLU -lglut
-APPS = demo benchmark
+APPS = demo benchmark accuracy
 
 ifdef DATATYPE
 CFLAGS += -D DATATYPE=$(DATATYPE)
@@ -15,6 +15,9 @@ demo: demo.c solver.c io.c
 	$(CC) $(CFLAGS)  -o $@ $^ $(LFLAGS)
 
 benchmark: benchmark.c solver.c io.c
+	$(CC) $(CFLAGS)  -o $@ $^ $(LFLAGS)
+
+accuracy: accuracy.c solver.c io.c
 	$(CC) $(CFLAGS)  -o $@ $^ $(LFLAGS)
 
 .PHONY: clean

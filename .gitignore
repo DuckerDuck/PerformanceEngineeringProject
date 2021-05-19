@@ -1,6 +1,7 @@
 # Our files
 demo
 benchmark
+accuracy
 
 # Prerequisites
 *.d
