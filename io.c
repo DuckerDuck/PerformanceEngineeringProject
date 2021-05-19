@@ -16,7 +16,7 @@
   {                                      \
     for (int j = 0; j < N + 2; j++)      \
     {                                    \
-      fprintf(fp, "%.10f ", x[IX(i, j)]); \
+      fprintf(fp, "%.24f ", x[IX(i, j)]); \
     }                                    \
     fprintf(fp, "\n");                   \
   }
