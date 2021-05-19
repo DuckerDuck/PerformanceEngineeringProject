@@ -63,7 +63,7 @@ void read_from_disk(char *filename, int N, fluid *u, fluid *v, fluid *u_prev, fl
 
   fp = fopen(filename, "r");
   if (fp == NULL) {
-    printf("Could not read file \"%s\"!", filename);
+    printf("Could not read file \"%s\"!\n", filename);
     return;
   }
   read = fscanf(fp, "N: %d\n", &file_N);

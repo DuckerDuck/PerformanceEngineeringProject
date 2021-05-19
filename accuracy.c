@@ -41,6 +41,10 @@ static int steps;
 static char *input;
 static char *output;
 
+/* This flag makes causes the end state to be written 
+*  to the output file */
+#define COMPARE_ONLY
+
 static void free_data(void)
 {
 	if (u)
@@ -117,15 +121,20 @@ static void load_and_simulate()
 	}
 
 	read_from_disk(input, N, u, v, u_prev, v_prev, dens, dens_prev);
+
+	#ifdef COMPARE_ONLY
 	read_from_disk(output, N, u_correct, v_correct, u_prev_correct, v_prev_correct, dens_correct, dens_prev_correct);
+	#endif
 
 	for (int s = 0; s < steps; s++)
 	{
 		step();
 	}
 
-	// For generating the correct output, don't forget to compile with the biggest datatype!
-	// save_to_disk(output, N, u, v, u_prev, v_prev, dens, dens_prev);
+	// For saving the correct output, don't forget to compile with the biggest datatype!
+	#ifndef COMPARE_ONLY
+	save_to_disk(output, N, u, v, u_prev, v_prev, dens, dens_prev);
+	#endif
 
 	printf("Err: %lf", sse());
 }
