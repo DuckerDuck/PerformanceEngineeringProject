@@ -25,6 +25,12 @@
 extern void dens_step(int N, fluid *x, fluid *x0, fluid *u, fluid *v, float diff, float dt);
 extern void vel_step(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, float visc, float dt);
 
+extern void project(int N, fluid *u, fluid *v, fluid *p, fluid *div);
+extern void advect(int N, int b, fluid *d, fluid *d0, fluid *u, fluid *v, float dt);
+extern void add_source(int N, fluid *x, fluid *s, float dt);
+extern void lin_solve(int N, int b, fluid *x, fluid *x0, float a, float c);
+
+
 /* Simulation State */
 static int N;
 static float dt, diff, visc;
@@ -124,8 +130,10 @@ static void set_random_state()
 
 static void benchmark(int file_N)
 {
-	double start_time, end_time, total_time;
-	total_time = 0;
+	double start_time, end_time, total_time, lin_solve_time, advect_time, project_time, add_source_time;
+	int s = 0;
+	total_time = lin_solve_time = advect_time = project_time = add_source_time = 0.0;
+	
 	N = file_N;
 
 	if (u)
@@ -144,18 +152,64 @@ static void benchmark(int file_N)
 	{	
 		set_random_state();
 		// read_from_disk(start_state, file_N, u, v, u_prev, v_prev, dens, dens_prev);
-
+	
+		// Time for whole application
 		start_time = get_time();
-		for (int s = 0; s < steps; s++)
+		for (s = 0; s < steps; s++)
 		{
 			step();
 		}
 		end_time = get_time();
-		total_time += (end_time - start_time);
+		total_time += end_time - start_time;
+
+		// Time for project function
+		start_time = get_time();
+		for (s = 0; s < steps; s++)
+		{
+			project(N, u, v, u_prev, v_prev);
+		}
+		end_time = get_time();
+		project_time += end_time - start_time;
+
+		// Time for lin solve function
+		start_time = get_time();
+		for (s = 0; s < steps; s++)
+		{
+			lin_solve(N, 0, dens, dens_prev, 1, 4);
+		}
+		end_time = get_time();
+		lin_solve_time += end_time - start_time;
+
+		// Time for advect function
+		start_time = get_time();
+		for (s = 0; s < steps; s++)
+		{
+			advect(N, 0, dens, dens_prev, u, v, dt);
+		}
+		end_time = get_time();
+		advect_time += end_time - start_time;
+
+		// Time for add_source function
+		start_time = get_time();
+		for (s = 0; s < steps; s++)
+		{
+			add_source(N, u, u_prev, dt);
+		}
+		end_time = get_time();
+		add_source_time += end_time - start_time;
+		
 	}
 
-	double step_time_s = (total_time / (runs * steps));
-	printf("total: %lf s, time per step: %lf ms, frames per second: %lf \n", total_time, step_time_s * 1e3, 1.0 / step_time_s);
+	double step_time_total_s = (total_time / (runs * steps));
+	double step_time_advect_s = (advect_time / (runs * steps));
+	double step_time_lin_solve_s = (lin_solve_time / (runs * steps));
+	double step_time_add_source_s = (add_source_time / (runs * steps));
+	double step_time_project_s = (project_time / (runs * steps));
+	printf("total: %lf s, total step: %lf ms, frames per second: %lf, ", total_time, step_time_total_s * 1e3, 1.0 / step_time_total_s);
+	printf("advect: %lf ms, ", step_time_advect_s * 1e3);
+	printf("lin_solve: %lf ms, ", step_time_lin_solve_s * 1e3);
+	printf("add_source: %lf ms, ", step_time_add_source_s * 1e3);
+	printf("project: %lf ms \n", step_time_project_s * 1e3);
 }
 
 int main(int argc, char **argv)
