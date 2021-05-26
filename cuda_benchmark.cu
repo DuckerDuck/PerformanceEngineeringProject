@@ -98,26 +98,30 @@ static int cuda_allocate_data(void)
 {
 	int size = (N + 2) * (N + 2) * sizeof(fluid);
 	
-	gpu.u = NULL;
-	checkCuda(cudaMalloc((void **) &gpu.u, size));
+	gpu.a = NULL;
+	checkCuda(cudaMalloc((void **) &gpu.a, size));
 	
-	gpu.v = NULL;
-	checkCuda(cudaMalloc((void **) &gpu.v, size));
+	gpu.b = NULL;
+	checkCuda(cudaMalloc((void **) &gpu.b, size));
 	
-	gpu.u_prev = NULL;
-	checkCuda(cudaMalloc((void **) &gpu.u_prev, size));
+	// gpu.u_prev = NULL;
+	// checkCuda(cudaMalloc((void **) &gpu.u_prev, size));
 
-	gpu.v_prev = NULL;
-	checkCuda(cudaMalloc((void **) &gpu.v_prev, size));
+	// gpu.v_prev = NULL;
+	// checkCuda(cudaMalloc((void **) &gpu.v_prev, size));
 
-	gpu.dens = NULL;
-	checkCuda(cudaMalloc((void **) &gpu.dens, size));
+	// gpu.dens = NULL;
+	// checkCuda(cudaMalloc((void **) &gpu.dens, size));
 
-	gpu.dens_prev = NULL;
-	checkCuda(cudaMalloc((void **) &gpu.dens_prev, size));
+	// gpu.dens_prev = NULL;
+	// checkCuda(cudaMalloc((void **) &gpu.dens_prev, size));
 
-	if (!gpu.u || !gpu.v || !gpu.u_prev || 
-		!gpu.v_prev || !gpu.dens || !gpu.dens_prev ) {
+	// if (!gpu.u || !gpu.v || !gpu.u_prev || 
+	// 	!gpu.v_prev || !gpu.dens || !gpu.dens_prev ) {
+	// 	return 0;
+	// }
+	if (!gpu.a || !gpu.b) 
+	{
 		return 0;
 	}
 	return 1;
@@ -282,7 +286,7 @@ int main(int argc, char **argv)
 	printf("Arguments: dt=%g diff=%g visc=%g force=%g source=%g steps=%d runs=%d\n",
 		   dt, diff, visc, force, source, steps, runs);
 
-	for (int i = 128; i <= 1024; i += 64)
+	for (int i = 512; i <= 1024; i += 64)
 		benchmark(i);
 	
 	free_data();

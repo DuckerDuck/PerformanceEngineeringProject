@@ -3,8 +3,7 @@
 #include "solver.h"
 
 typedef struct GPUSTATE {
-	fluid *u, *v, *u_prev, *v_prev;
-	fluid *dens, *dens_prev;
+	fluid *a, *b;
 } GPUSTATE;
 
 void lin_solve_cuda(int N, int b, fluid *x, fluid *x0, float a, float c, GPUSTATE gpu);
