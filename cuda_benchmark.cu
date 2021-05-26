@@ -31,6 +31,9 @@ static float force, source;
 static fluid *u, *v, *u_prev, *v_prev;
 static fluid *dens, *dens_prev;
 
+/* Device Simulation State */
+static GPUSTATE gpu;
+
 /* Benchmark State */
 static int steps;
 static int runs;
@@ -91,6 +94,35 @@ static int allocate_data(void)
 	return (1);
 }
 
+static int cuda_allocate_data(void)
+{
+	int size = (N + 2) * (N + 2) * sizeof(fluid);
+	
+	gpu.u = NULL;
+	checkCuda(cudaMalloc((void **) &gpu.u, size));
+	
+	gpu.v = NULL;
+	checkCuda(cudaMalloc((void **) &gpu.v, size));
+	
+	gpu.u_prev = NULL;
+	checkCuda(cudaMalloc((void **) &gpu.u_prev, size));
+
+	gpu.v_prev = NULL;
+	checkCuda(cudaMalloc((void **) &gpu.v_prev, size));
+
+	gpu.dens = NULL;
+	checkCuda(cudaMalloc((void **) &gpu.dens, size));
+
+	gpu.dens_prev = NULL;
+	checkCuda(cudaMalloc((void **) &gpu.dens_prev, size));
+
+	if (!gpu.u || !gpu.v || !gpu.u_prev || 
+		!gpu.v_prev || !gpu.dens || !gpu.dens_prev ) {
+		return 0;
+	}
+	return 1;
+}
+
 static void step(void)
 {
 	vel_step(N, u, v, u_prev, v_prev, visc, dt);
@@ -136,6 +168,11 @@ static void benchmark(int file_N)
 		fprintf(stderr, "Could not allocate data for run\n");
 		return;
 	}
+
+	if (!cuda_allocate_data()) {
+		fprintf(stderr, "Could not allocate data on GPU device for run\n");
+		return;
+	}
 	
 	clear_data();
 
@@ -168,7 +205,7 @@ static void benchmark(int file_N)
 		start_time = get_time();
 		for (s = 0; s < steps; s++)
 		{
-			lin_solve_cuda(N, 0, dens, dens_prev, 1, 4);
+			lin_solve_cuda(N, 0, dens, dens_prev, 1, 4, gpu);
 		}
 		end_time = get_time();
 		lin_solve_time += end_time - start_time;
@@ -207,7 +244,6 @@ static void benchmark(int file_N)
 
 int main(int argc, char **argv)
 {
-
 	if (argc != 1 && argc != 8)
 	{
 		fprintf(stderr, "usage : %s N dt diff visc force source\n", argv[0]);

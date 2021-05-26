@@ -32,4 +32,6 @@ void advect(int N, int b, fluid *d, fluid *d0, fluid *u, fluid *v, float dt);
 void add_source(int N, fluid *x, fluid *s, float dt);
 void lin_solve(int N, int b, fluid *x, fluid *x0, float a, float c);
 
+void set_bnd(int N, int b, fluid *x);
+
 #endif

@@ -2,6 +2,7 @@
 demo
 benchmark
 accuracy
+cuda-benchmark
 
 # Prerequisites
 *.d
