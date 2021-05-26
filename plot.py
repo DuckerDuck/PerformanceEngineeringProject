@@ -67,7 +67,7 @@ def advect(n, adv_c):
 
 def total(n, adv_c, src_c, proj_c, ls_c, p=1):
     """ Full analytical model """
-    return 3 * add_source(n, adv_c) + \
+    return 3 * add_source(n, src_c) + \
            2 * project(n, ls_c, proj_c, p) + \
            3 * lin_solve(n, ls_c, p) + \
            3 * advect(n, adv_c)
