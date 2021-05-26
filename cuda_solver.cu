@@ -106,6 +106,8 @@ void lin_solve_cuda(int N, int b, fluid *x, fluid *x0, float a, float c, GPUSTAT
 		LINSOLVE_KERNEL<<<N/threadBlockSize + 1, threadBlockSize>>>(N, gpu.a, gpu.b, a, c);
 		checkCuda(cudaGetLastError());
 		
+		// No parallelization here, this simply prevents us from 
+		// copying memory from/to host 20 times
 		set_bnd_cuda<<<1, threadBlockSize>>>(N, b, gpu.a);
 		checkCuda(cudaGetLastError());
 	}
