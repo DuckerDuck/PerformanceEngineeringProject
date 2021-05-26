@@ -98,6 +98,26 @@ void dens_step_cuda(int N, fluid *x, fluid *x0, fluid *u, fluid *v, float diff, 
 	advect(N, 0, x, x0, u, v, dt);
 }
 
+void project_cuda(int N, fluid *u, fluid *v, fluid *p, fluid *div, GPUSTATE gpu)
+{
+	int i, j;
+
+	FOR_EACH_CELL
+	div[IX(i, j)] = -0.5f * (u[IX(i + 1, j)] - u[IX(i - 1, j)] + v[IX(i, j + 1)] - v[IX(i, j - 1)]) / N;
+	p[IX(i, j)] = 0;
+	END_FOR
+	set_bnd(N, 0, div);
+	set_bnd(N, 0, p);
+
+	lin_solve_cuda(N, 0, p, div, 1, 4, gpu);
+
+	FOR_EACH_CELL
+	u[IX(i, j)] -= 0.5f * N * (p[IX(i + 1, j)] - p[IX(i - 1, j)]);
+	v[IX(i, j)] -= 0.5f * N * (p[IX(i, j + 1)] - p[IX(i, j - 1)]);
+	END_FOR
+	set_bnd(N, 1, u);
+	set_bnd(N, 2, v);
+}
 
 void vel_step_cuda(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, float visc, float dt, GPUSTATE gpu)
 {
@@ -107,10 +127,10 @@ void vel_step_cuda(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, float visc, 
 	diffuse_cuda(N, 1, u, u0, visc, dt, gpu);
 	SWAP(v0, v);
 	diffuse_cuda(N, 2, v, v0, visc, dt, gpu);
-	project(N, u, v, u0, v0);
+	project_cuda(N, u, v, u0, v0, gpu);
 	SWAP(u0, u);
 	SWAP(v0, v);
 	advect(N, 1, u, u0, u0, v0, dt);
 	advect(N, 2, v, v0, u0, v0, dt);
-	project(N, u, v, u0, v0);
+	project_cuda(N, u, v, u0, v0, gpu);
 }

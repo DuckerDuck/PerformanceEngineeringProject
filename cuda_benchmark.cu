@@ -184,7 +184,7 @@ static void benchmark(int file_N)
 		start_time = get_time();
 		for (s = 0; s < steps; s++)
 		{
-			project(N, u, v, u_prev, v_prev);
+			project_cuda(N, u, v, u_prev, v_prev, gpu);
 		}
 		end_time = get_time();
 		project_time += end_time - start_time;
