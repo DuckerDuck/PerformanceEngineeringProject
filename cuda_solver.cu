@@ -79,11 +79,20 @@ __global__ void set_bnd_cuda(int N, int b, fluid *x)
 
 void to_device(int N, fluid* a, fluid* b, GPUSTATE gpu)
 {
+	cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+	cudaEventRecord(start, 0);
 	int size = (N + 2) * (N + 2) * sizeof(fluid);
 	
 	checkCuda(cudaMemcpy(gpu.a, a, size, cudaMemcpyHostToDevice));
 	checkCuda(cudaMemcpy(gpu.b, b, size, cudaMemcpyHostToDevice));
 
+	cudaEventRecord(stop, 0);
+	float elapsedTime;
+    cudaEventElapsedTime(&elapsedTime, start, stop);
+	printf("to_device: %f ms\n", elapsedTime);
 }
 
 void to_host(int N, fluid* a, fluid* b, GPUSTATE gpu)

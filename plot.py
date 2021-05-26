@@ -73,6 +73,8 @@ def total(n, adv_c, src_c, proj_c, ls_c, p=1):
            3 * advect(n, adv_c)
 
 def plot():
+    plt.rcParams.update({'font.size': 12})
+    
     output = Path('./output')
     n, y_total = parse_output(output, 'N', 'total step')
     P, y_cuda_total = parse_output(Path('./output_cuda'), 'threads', 'total step')
@@ -86,12 +88,16 @@ def plot():
     proj_c = np.mean([(y - lin_solve(nn, ls_c, 1)) / (2 * nn * nn) for y, nn in zip(y_project, n)])
     src_c = np.mean([y / (nn*nn) for y, nn in zip(y_source, n)])
     adv_c = np.mean([y / (nn*nn) for y, nn in zip(y_advect, n)])
+
+    print(f'Parameters: \n\tls_c: {ls_c}\n\tproj_c: {proj_c}\n\tsrc_c: {src_c}\n\tadv_c: {adv_c}')
     
     
     plt.figure()
-    plt.plot(n, y_total, label='Sequential')
-    plt.plot(n, y_cuda_total, label='CUDA')
+    plt.scatter(n, y_total, label='Sequential')
+    plt.scatter(n, y_cuda_total, label='CUDA')
     plt.plot(n, [total(nn, adv_c, src_c, proj_c, ls_c) for nn in n], label='Sequential Model')
+
+    plt.plot(n, [total(nn, adv_c, src_c, proj_c, ls_c, p) for nn, p in zip(n, P)], label='CUDA Model')
     
     # plt.plot(n, y_advect, label='advect')
     # plt.plot(n, [advect(nn, adv_c) for nn in n], label='advect fit')
