@@ -1,0 +1,16 @@
+Arguments: dt=0.1 diff=0 visc=0 force=5 source=100 steps=10 runs=10
+N: 128, total: 0.670146 s, total step: 6.701465 ms, frames per second: 149.221111, advect: 0.068200 ms, lin_solve: 1.260121 ms, add_source: 0.002031 ms, threads: 8, project: 1.310897 ms 
+N: 192, total: 0.998946 s, total step: 9.989457 ms, frames per second: 100.105540, advect: 0.156202 ms, lin_solve: 1.831088 ms, add_source: 0.004802 ms, threads: 12, project: 1.992252 ms 
+N: 256, total: 1.395633 s, total step: 13.956332 ms, frames per second: 71.652063, advect: 0.297017 ms, lin_solve: 2.449853 ms, add_source: 0.008080 ms, threads: 16, project: 2.837639 ms 
+N: 320, total: 1.828978 s, total step: 18.289781 ms, frames per second: 54.675341, advect: 0.461392 ms, lin_solve: 3.100860 ms, add_source: 0.012720 ms, threads: 20, project: 3.695328 ms 
+N: 384, total: 2.295166 s, total step: 22.951665 ms, frames per second: 43.569824, advect: 0.665994 ms, lin_solve: 3.771753 ms, add_source: 0.018206 ms, threads: 24, project: 4.658153 ms 
+N: 448, total: 2.795484 s, total step: 27.954836 ms, frames per second: 35.771986, advect: 0.899363 ms, lin_solve: 4.441664 ms, add_source: 0.025842 ms, threads: 28, project: 5.680215 ms 
+N: 512, total: 3.508813 s, total step: 35.088131 ms, frames per second: 28.499665, advect: 1.158040 ms, lin_solve: 5.148673 ms, add_source: 0.032532 ms, threads: 32, project: 7.801397 ms 
+N: 576, total: 3.821491 s, total step: 38.214915 ms, frames per second: 26.167794, advect: 1.447158 ms, lin_solve: 5.804832 ms, add_source: 0.043006 ms, threads: 36, project: 7.818296 ms 
+N: 640, total: 5.447745 s, total step: 54.477446 ms, frames per second: 18.356220, advect: 1.821382 ms, lin_solve: 8.602931 ms, add_source: 0.051787 ms, threads: 40, project: 11.105540 ms 
+N: 704, total: 6.746079 s, total step: 67.460794 ms, frames per second: 14.823425, advect: 2.254872 ms, lin_solve: 10.744140 ms, add_source: 0.066781 ms, threads: 44, project: 13.594177 ms 
+N: 768, total: 7.904272 s, total step: 79.042716 ms, frames per second: 12.651387, advect: 3.339610 ms, lin_solve: 12.202139 ms, add_source: 0.081379 ms, threads: 48, project: 16.008558 ms 
+N: 832, total: 9.199106 s, total step: 91.991057 ms, frames per second: 10.870622, advect: 4.395406 ms, lin_solve: 13.585033 ms, add_source: 0.097980 ms, threads: 52, project: 19.262319 ms 
+N: 896, total: 11.179737 s, total step: 111.797369 ms, frames per second: 8.944754, advect: 6.147182 ms, lin_solve: 15.177650 ms, add_source: 0.113318 ms, threads: 56, project: 24.493551 ms 
+N: 960, total: 13.716853 s, total step: 137.168531 ms, frames per second: 7.290302, advect: 9.794774 ms, lin_solve: 16.841364 ms, add_source: 0.143442 ms, threads: 60, project: 30.661950 ms 
+N: 1024, total: 17.133487 s, total step: 171.334867 ms, frames per second: 5.836524, advect: 12.908494 ms, lin_solve: 17.934327 ms, add_source: 0.156026 ms, threads: 64, project: 39.159892 ms 
