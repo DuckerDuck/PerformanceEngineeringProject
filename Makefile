@@ -3,7 +3,7 @@ CC = g++
 CU_FLAGS = -O2 -g --ptxas-options=-v
 CFLAGS += -O3 -Wall -g
 LFLAGS += -lGL -lGLU -lglut
-APPS = demo benchmark accuracy cuda-benchmark
+APPS = demo benchmark accuracy cuda-benchmark cuda-demo
 
 ifdef DATATYPE
 CFLAGS += -D DATATYPE=$(DATATYPE)
@@ -27,6 +27,9 @@ benchmark: benchmark.c solver.c io.c
 
 cuda-benchmark: cuda_solver.o solver.o cuda_benchmark.o 
 	$(NVCC) $^ -o $@
+
+cuda-demo: cuda_solver.o solver.o cuda_demo.o io.o
+	$(NVCC) $^ -o $@ $(LFLAGS)
 
 accuracy: accuracy.c solver.c io.c
 	$(CC) $(CFLAGS)  -o $@ $^ $(LFLAGS)

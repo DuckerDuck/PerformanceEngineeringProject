@@ -19,6 +19,9 @@ __global__ void lin_solve_kernel(int N, fluid *x, fluid *x0, float a, float c)
 	int j;
 	fluid tmp = 0;
 	
+	// i starts at 1
+	i += 1;
+	
 	if (i <= N) {
 		for (j = 1; j <= N; j++) 
 		{
@@ -66,16 +69,39 @@ void to_host(int N, fluid* a, fluid* b, GPUSTATE gpu)
 void lin_solve_cuda(int N, int b, fluid *x, fluid *x0, float a, float c, GPUSTATE gpu)
 {	
 	int k;
-	int threadBlockSize = 64;
+	int threadBlockSize = 16;
 
 	to_device(N, x, x0, gpu);
 	for (k = 0; k < 20; k++)
 	{
-		lin_solve_kernel<<<N/threadBlockSize + 1, threadBlockSize>>>(N, gpu.a, gpu.b, a, b);
+		lin_solve_kernel<<<N/threadBlockSize + 1, threadBlockSize>>>(N, gpu.a, gpu.b, a, c);
 		checkCuda(cudaGetLastError());
 		
 		set_bnd_cuda<<<1, threadBlockSize>>>(N, b, gpu.a);
 		checkCuda(cudaGetLastError());
 	}
 	to_host(N, x, x0, gpu);
+}
+
+void diffuse_cuda(int N, int b, fluid *x, fluid *x0, float diff, float dt, GPUSTATE gpu)
+{
+	float a = dt * diff * N * N;
+	lin_solve_cuda(N, b, x, x0, a, 1 + 4 * a, gpu);
+}
+
+
+void vel_step_cuda(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, float visc, float dt, GPUSTATE gpu)
+{
+	add_source(N, u, u0, dt);
+	add_source(N, v, v0, dt);
+	SWAP(u0, u);
+	diffuse_cuda(N, 1, u, u0, visc, dt, gpu);
+	SWAP(v0, v);
+	diffuse_cuda(N, 2, v, v0, visc, dt, gpu);
+	project(N, u, v, u0, v0);
+	SWAP(u0, u);
+	SWAP(v0, v);
+	advect(N, 1, u, u0, u0, v0, dt);
+	advect(N, 2, v, v0, u0, v0, dt);
+	project(N, u, v, u0, v0);
 }
