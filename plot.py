@@ -75,7 +75,7 @@ def total(n, adv_c, src_c, proj_c, ls_c, p=1):
 def plot():
     output = Path('./output')
     n, y_total = parse_output(output, 'N', 'total step')
-    _, y_cuda_total = parse_output(Path('./output_cuda'), 'N', 'total step')
+    P, y_cuda_total = parse_output(Path('./output_cuda'), 'threads', 'total step')
     _, y_advect = parse_output(output, 'N', 'advect')
     _, y_linsolve = parse_output(output, 'N', 'lin_solve')
     _, y_project = parse_output(output, 'N', 'project')
@@ -89,9 +89,9 @@ def plot():
     
     
     plt.figure()
-    plt.plot(n, y_total, label='total')
-    plt.plot(n, y_cuda_total, label='total cuda')
-    plt.plot(n, [total(nn, adv_c, src_c, proj_c, ls_c, 9) for nn in n], label='analytical p=1')
+    plt.plot(n, y_total, label='Sequential')
+    plt.plot(n, y_cuda_total, label='CUDA')
+    plt.plot(n, [total(nn, adv_c, src_c, proj_c, ls_c) for nn in n], label='Sequential Model')
     
     # plt.plot(n, y_advect, label='advect')
     # plt.plot(n, [advect(nn, adv_c) for nn in n], label='advect fit')
