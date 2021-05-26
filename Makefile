@@ -1,12 +1,16 @@
 NVCC = nvcc
 CC = g++
-CU_FLAGS = -O2 -g --ptxas-options=-v
+CU_FLAGS = -O2 -g --ptxas-options=-v --gpu-architecture=sm_53
 CFLAGS += -O3 -Wall -g
 LFLAGS += -lGL -lGLU -lglut
 APPS = demo benchmark accuracy cuda-benchmark cuda-demo
 
 ifdef DATATYPE
 CFLAGS += -D DATATYPE=$(DATATYPE)
+endif
+
+ifdef HALF_PRECISION
+CU_FLAGS += -D HALF_PRECISION
 endif
 
 .PHONY: all

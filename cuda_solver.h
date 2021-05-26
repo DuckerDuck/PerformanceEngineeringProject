@@ -2,6 +2,12 @@
 #define _CUDA_SOLVER_H
 #include "solver.h"
 
+#ifdef HALF_PRECISION
+#define LINSOLVE_KERNEL lin_solve_kernel_half
+#else
+#define LINSOLVE_KERNEL lin_solve_kernel
+#endif
+
 typedef struct GPUSTATE {
 	fluid *a, *b;
 } GPUSTATE;

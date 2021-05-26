@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <cuda_fp16.h>
 
 #include "solver.h"
 #include "cuda_solver.h"
@@ -27,6 +28,34 @@ __global__ void lin_solve_kernel(int N, fluid *x, fluid *x0, float a, float c)
 		{
 			tmp = (x0[IX(i, j)] + a * (x[IX(i - 1, j)] + x[IX(i + 1, j)] + x[IX(i, j - 1)] + x[IX(i, j + 1)]));
 			x[IX(i, j)] = tmp / c;
+		}
+	}
+}
+
+__global__ void lin_solve_kernel_half(int N, fluid *x, fluid *x0, float a, float c) 
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	int j;
+	
+	half ha = __float2half(a);
+	half ca = __float2half(c);
+	half tmp, k, l, m, o, p;
+	
+	// i starts at 1
+	i += 1;
+
+	if (i <= N) {
+		for (j = 1; j <= N; j++) 
+		{
+			k = __float2half(x0[IX(i, j)]);
+			l = __float2half(x[IX(i - 1, j)]);
+			m = __float2half(x[IX(i + 1, j)]);
+			o = __float2half(x[IX(i, j - 1)]);
+			p = __float2half(x[IX(i, j + 1)]);
+			// tmp = k + ha * (l + m + o + p);
+			tmp = __hfma(ha, __hadd(__hadd(__hadd(l, m), o), p), k);
+			
+			x[IX(i, j)] = __half2float(tmp / ca);
 		}
 	}
 }
@@ -74,7 +103,7 @@ void lin_solve_cuda(int N, int b, fluid *x, fluid *x0, float a, float c, GPUSTAT
 	to_device(N, x, x0, gpu);
 	for (k = 0; k < 20; k++)
 	{
-		lin_solve_kernel<<<N/threadBlockSize + 1, threadBlockSize>>>(N, gpu.a, gpu.b, a, c);
+		LINSOLVE_KERNEL<<<N/threadBlockSize + 1, threadBlockSize>>>(N, gpu.a, gpu.b, a, c);
 		checkCuda(cudaGetLastError());
 		
 		set_bnd_cuda<<<1, threadBlockSize>>>(N, b, gpu.a);
