@@ -89,6 +89,15 @@ void diffuse_cuda(int N, int b, fluid *x, fluid *x0, float diff, float dt, GPUST
 	lin_solve_cuda(N, b, x, x0, a, 1 + 4 * a, gpu);
 }
 
+void dens_step_cuda(int N, fluid *x, fluid *x0, fluid *u, fluid *v, float diff, float dt, GPUSTATE gpu)
+{
+	add_source(N, x, x0, dt);
+	SWAP(x0, x);
+	diffuse_cuda(N, 0, x, x0, diff, dt, gpu);
+	SWAP(x0, x);
+	advect(N, 0, x, x0, u, v, dt);
+}
+
 
 void vel_step_cuda(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, float visc, float dt, GPUSTATE gpu)
 {
