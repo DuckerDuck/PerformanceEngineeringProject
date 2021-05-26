@@ -5,6 +5,9 @@ accuracy
 cuda-benchmark
 cuda-demo
 
+.vscode
+*.png
+
 # Prerequisites
 *.d
 

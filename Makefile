@@ -1,6 +1,6 @@
 NVCC = nvcc
 CC = g++
-CU_FLAGS = -O2 -g --ptxas-options=-v --gpu-architecture=sm_53
+CU_FLAGS = -O3 -g --ptxas-options=-v --gpu-architecture=sm_53
 CFLAGS += -O3 -Wall -g
 LFLAGS += -lGL -lGLU -lglut
 APPS = demo benchmark accuracy cuda-benchmark cuda-demo
