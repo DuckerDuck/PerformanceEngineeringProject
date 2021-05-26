@@ -1,6 +1,6 @@
 /*
   ======================================================================
-   benchmark.c --- Benchmark fluid solver
+   cuda_benchmark.c --- Benchmark fluid solver
   ----------------------------------------------------------------------
    Author : Jan Schutte (jan.schutte@student.uva.nl)
    Creation Date : Apr 26 2021
@@ -20,6 +20,9 @@
 
 #include "solver.h"
 #include "io.h"
+
+#include "cuda_solver.h"
+
 
 /* Simulation State */
 static int N;
@@ -165,7 +168,7 @@ static void benchmark(int file_N)
 		start_time = get_time();
 		for (s = 0; s < steps; s++)
 		{
-			lin_solve(N, 0, dens, dens_prev, 1, 4);
+			lin_solve_cuda(N, 0, dens, dens_prev, 1, 4);
 		}
 		end_time = get_time();
 		lin_solve_time += end_time - start_time;

@@ -21,10 +21,6 @@
 #include "solver.h"
 #include "io.h"
 
-/* external definitions (from solver.c) */
-extern void dens_step(int N, fluid *x, fluid *x0, fluid *u, fluid *v, float diff, float dt);
-extern void vel_step(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, float visc, float dt);
-
 /* Simulation State */
 static int N;
 static float dt, diff, visc;
