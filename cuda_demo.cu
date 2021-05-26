@@ -192,6 +192,7 @@ static void draw_density(void)
 static void get_from_UI(fluid *d, fluid *u, fluid *v)
 {
 	int i, j, size = (N + 2) * (N + 2);
+	int range = (N/128) + 1;
 
 	for (i = 0; i < size; i++)
 	{
@@ -215,7 +216,15 @@ static void get_from_UI(fluid *d, fluid *u, fluid *v)
 
 	if (mouse_down[2])
 	{
-		d[IX(i, j)] = source;
+		for (int ii = -range; ii <= range; ii++) 
+		{
+			for (int jj = -range; jj <= range; jj++) 
+			{
+				if (i + ii < 1 || i + ii > N || j + jj < 1 || j + jj > N)
+					continue;
+				d[IX(i + ii, j + jj)] = source / (3 + range);
+			}
+		}
 	}
 
 	omx = mx;
@@ -317,7 +326,7 @@ static void open_glut_window(void)
 
 	glutInitWindowPosition(0, 0);
 	glutInitWindowSize(win_x, win_y);
-	win_id = glutCreateWindow("Alias | wavefront");
+	win_id = glutCreateWindow("Fluid Simulator");
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -360,7 +369,7 @@ int main(int argc, char **argv)
 
 	if (argc == 1)
 	{
-		N = 64;
+		N = 128;
 		dt = 0.1f;
 		diff = 0.0f;
 		visc = 0.0f;
