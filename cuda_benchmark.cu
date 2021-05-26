@@ -227,6 +227,7 @@ static void benchmark(int file_N)
 	printf("advect: %lf ms, ", step_time_advect_s * 1e3);
 	printf("lin_solve: %lf ms, ", step_time_lin_solve_s * 1e3);
 	printf("add_source: %lf ms, ", step_time_add_source_s * 1e3);
+	printf("threads: %d, ", (int)(N / (float)BLOCKSIZE));
 	printf("project: %lf ms \n", step_time_project_s * 1e3);
 }
 
@@ -270,7 +271,7 @@ int main(int argc, char **argv)
 	printf("Arguments: dt=%g diff=%g visc=%g force=%g source=%g steps=%d runs=%d\n",
 		   dt, diff, visc, force, source, steps, runs);
 
-	for (int i = 512; i <= 1024; i += 64)
+	for (int i = 128; i <= 1024; i += 64)
 		benchmark(i);
 	
 	free_data();

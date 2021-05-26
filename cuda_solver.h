@@ -8,6 +8,8 @@
 #define LINSOLVE_KERNEL lin_solve_kernel
 #endif
 
+#define BLOCKSIZE 16
+
 typedef struct GPUSTATE {
 	fluid *a, *b;
 } GPUSTATE;

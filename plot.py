@@ -73,11 +73,13 @@ def total(n, adv_c, src_c, proj_c, ls_c, p=1):
            3 * advect(n, adv_c)
 
 def plot():
-    n, y_total = parse_output(Path('./output'), 'N', 'total step')
-    _, y_advect = parse_output(Path('./output'), 'N', 'advect')
-    _, y_linsolve = parse_output(Path('./output'), 'N', 'lin_solve')
-    _, y_project = parse_output(Path('./output'), 'N', 'project')
-    _, y_source = parse_output(Path('./output'), 'N', 'add_source')
+    output = Path('./output')
+    n, y_total = parse_output(output, 'N', 'total step')
+    _, y_cuda_total = parse_output(Path('./output_cuda'), 'N', 'total step')
+    _, y_advect = parse_output(output, 'N', 'advect')
+    _, y_linsolve = parse_output(output, 'N', 'lin_solve')
+    _, y_project = parse_output(output, 'N', 'project')
+    _, y_source = parse_output(output, 'N', 'add_source')
     
     # Fit parameters of analytical model
     ls_c = np.mean([y / (20*nn*nn) for y, nn in zip(y_linsolve, n)])
@@ -88,7 +90,8 @@ def plot():
     
     plt.figure()
     plt.plot(n, y_total, label='total')
-    plt.plot(n, [total(nn, adv_c, src_c, proj_c, ls_c) for nn in n], label='analytical p=1')
+    plt.plot(n, y_cuda_total, label='total cuda')
+    plt.plot(n, [total(nn, adv_c, src_c, proj_c, ls_c, 9) for nn in n], label='analytical p=1')
     
     # plt.plot(n, y_advect, label='advect')
     # plt.plot(n, [advect(nn, adv_c) for nn in n], label='advect fit')

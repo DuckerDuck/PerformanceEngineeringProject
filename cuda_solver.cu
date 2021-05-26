@@ -98,17 +98,16 @@ void to_host(int N, fluid* a, fluid* b, GPUSTATE gpu)
 void lin_solve_cuda(int N, int b, fluid *x, fluid *x0, float a, float c, GPUSTATE gpu)
 {	
 	int k;
-	int threadBlockSize = 16;
 
 	to_device(N, x, x0, gpu);
 	for (k = 0; k < 20; k++)
 	{
-		LINSOLVE_KERNEL<<<N/threadBlockSize + 1, threadBlockSize>>>(N, gpu.a, gpu.b, a, c);
+		LINSOLVE_KERNEL<<<N/BLOCKSIZE + 1, BLOCKSIZE>>>(N, gpu.a, gpu.b, a, c);
 		checkCuda(cudaGetLastError());
 		
 		// No parallelization here, this simply prevents us from 
 		// copying memory from/to host 20 times
-		set_bnd_cuda<<<1, threadBlockSize>>>(N, b, gpu.a);
+		set_bnd_cuda<<<1, BLOCKSIZE>>>(N, b, gpu.a);
 		checkCuda(cudaGetLastError());
 	}
 	to_host(N, x, x0, gpu);
