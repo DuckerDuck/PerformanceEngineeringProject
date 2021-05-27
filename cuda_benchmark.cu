@@ -143,9 +143,9 @@ static void set_random_state()
 
 static void benchmark(int file_N)
 {
-	double start_time, end_time, total_time, lin_solve_time, advect_time, project_time, add_source_time;
+	double start_time, end_time, total_time, lin_solve_time, advect_time, project_time, add_source_time, cuda_copy;
 	int s = 0;
-	total_time = lin_solve_time = advect_time = project_time = add_source_time = 0.0;
+	total_time = lin_solve_time = advect_time = project_time = add_source_time = cuda_copy = 0.0;
 	
 	N = file_N;
 
@@ -215,6 +215,15 @@ static void benchmark(int file_N)
 		}
 		end_time = get_time();
 		add_source_time += end_time - start_time;
+
+		start_time = get_time();
+		for (s = 0; s < steps; s++)
+		{
+			to_device(N, dens, dens_prev, gpu);
+			to_host(N, dens, dens_prev, gpu);
+		}
+		end_time = get_time();
+		cuda_copy += end_time - start_time;
 		
 	}
 
@@ -223,11 +232,13 @@ static void benchmark(int file_N)
 	double step_time_lin_solve_s = (lin_solve_time / (runs * steps));
 	double step_time_add_source_s = (add_source_time / (runs * steps));
 	double step_time_project_s = (project_time / (runs * steps));
+	double step_time_cuda_copy_s = (cuda_copy / (runs * steps));
 	printf("total: %lf s, total step: %lf ms, frames per second: %lf, ", total_time, step_time_total_s * 1e3, 1.0 / step_time_total_s);
 	printf("advect: %lf ms, ", step_time_advect_s * 1e3);
 	printf("lin_solve: %lf ms, ", step_time_lin_solve_s * 1e3);
 	printf("add_source: %lf ms, ", step_time_add_source_s * 1e3);
 	printf("threads: %d, ", (int)(N / (float)BLOCKSIZE));
+	printf("CUDA copy: %lf ms, ", step_time_cuda_copy_s * 1e3);
 	printf("project: %lf ms \n", step_time_project_s * 1e3);
 }
 

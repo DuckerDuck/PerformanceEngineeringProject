@@ -383,8 +383,8 @@ int main(int argc, char **argv)
 		exit(1);
 	clear_data();
 
-	win_x = 512;
-	win_y = 512;
+	win_x = 1024;
+	win_y = 1024;
 	open_glut_window();
 
 	glutMainLoop();

@@ -77,27 +77,43 @@ def plot():
     
     output = Path('./output')
     n, y_total = parse_output(output, 'N', 'total step')
-    P, y_cuda_total = parse_output(Path('./output_cuda'), 'threads', 'total step')
     _, y_advect = parse_output(output, 'N', 'advect')
     _, y_linsolve = parse_output(output, 'N', 'lin_solve')
     _, y_project = parse_output(output, 'N', 'project')
     _, y_source = parse_output(output, 'N', 'add_source')
     
-    # Fit parameters of analytical model
+    P, y_cuda_total = parse_output(Path('./output_cuda'), 'threads', 'total step')
+    _, y_cuda_linsolve = parse_output(Path('./output_cuda'), 'threads', 'lin_solve')
+
+    _, y_cuda_fp16_total = parse_output(Path('./output_cuda_fp16'), 'threads', 'total step')
+    _, y_cuda_fp16_linsolve = parse_output(Path('./output_cuda_fp16'), 'threads', 'lin_solve')
+
+    # Fit parameters of sequential analytical model
     ls_c = np.mean([y / (20*nn*nn) for y, nn in zip(y_linsolve, n)])
     proj_c = np.mean([(y - lin_solve(nn, ls_c, 1)) / (2 * nn * nn) for y, nn in zip(y_project, n)])
     src_c = np.mean([y / (nn*nn) for y, nn in zip(y_source, n)])
     adv_c = np.mean([y / (nn*nn) for y, nn in zip(y_advect, n)])
+    print(f'Parameters Sequential: \n\tls_c: {ls_c}\n\tproj_c: {proj_c}\n\tsrc_c: {src_c}\n\tadv_c: {adv_c}')
 
-    print(f'Parameters: \n\tls_c: {ls_c}\n\tproj_c: {proj_c}\n\tsrc_c: {src_c}\n\tadv_c: {adv_c}')
-    
+    # Parameters of parallel model
+    ls_cuda_c = np.mean([y*p / (20*nn*nn) for p, y, nn in zip(P, y_cuda_linsolve, n)])
+    ls_cuda_fp16_c = np.mean([y*p / (20*nn*nn) for p, y, nn in zip(P, y_cuda_fp16_linsolve, n)])
+
+    print(f'Parameters CUDA: \n\tls_cuda_c: {ls_cuda_c}\n\tls_cuda_fp16_c:{ls_cuda_fp16_c}')
+
+    # Speedup
+    speedup = y_total[-1] / y_cuda_total[-1]
+    speedup_fp16 = y_total[-1] / y_cuda_fp16_total[-1]
+    print(f'Speedup n={n[-1]} x{speedup}')
+    print(f'Speedup fp16 n={n[-1]} x{speedup_fp16}')
     
     plt.figure()
     plt.scatter(n, y_total, label='Sequential')
     plt.scatter(n, y_cuda_total, label='CUDA')
+    plt.scatter(n, y_cuda_fp16_total, label='CUDA FP16')
     plt.plot(n, [total(nn, adv_c, src_c, proj_c, ls_c) for nn in n], label='Sequential Model')
-
-    plt.plot(n, [total(nn, adv_c, src_c, proj_c, ls_c, p) for nn, p in zip(n, P)], label='CUDA Model')
+    plt.plot(n, [total(nn, adv_c, src_c, proj_c, ls_cuda_c, p) for nn, p in zip(n, P)], label='CUDA Model')
+    # plt.plot(n, [total(nn, adv_c, src_c, proj_c, ls_cuda_fp16_c, p) for nn, p in zip(n, P)], label='CUDA FP16 Model')
     
     # plt.plot(n, y_advect, label='advect')
     # plt.plot(n, [advect(nn, adv_c) for nn in n], label='advect fit')
@@ -124,12 +140,12 @@ def plot():
 
     # plot for required p value
     plt.figure()
-    P = np.arange(1, 80)
-    plt.plot(P, [total(1024, adv_c, src_c, proj_c, ls_c, p) for p in P], label='N=1024')
+    P = np.arange(1, 100)
+    plt.plot(P, [total(1080, adv_c, src_c, proj_c, ls_cuda_c, p) for p in P], label='CUDA Model, N=1080')
 
     plt.plot(P, [16.7] * len(P), label='60 FPS', linestyle='--')
     plt.ylabel('Step time (ms)')
-    plt.xlabel('Parallelization (p)')
+    plt.xlabel('Threads')
     plt.legend()
     plt.tight_layout()
     plt.savefig('parallel.png')
