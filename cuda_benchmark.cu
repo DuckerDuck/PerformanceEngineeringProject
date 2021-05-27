@@ -214,7 +214,7 @@ static void benchmark(int file_N)
 		start_time = get_time();
 		for (s = 0; s < steps; s++)
 		{
-			advect(N, 0, dens, dens_prev, u, v, dt);
+			advect_cuda(N, 0, dens, dens_prev, u, v, dt, gpu);
 		}
 		end_time = get_time();
 		advect_time += end_time - start_time;
