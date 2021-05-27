@@ -134,9 +134,23 @@ __global__ void project_cuda_kernel_a(int N, fluid *u, fluid *v, fluid *u0, flui
 	}
 }
 
+__global__ void project_cuda_kernel_b(int N, fluid *u, fluid *v, fluid *u0) {
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	int j;
+	// i starts at 1
+	i += 1;
+	
+	if (i <= N) {
+		for (j = 1; j <= N; j++) 
+		{
+			u[IX(i, j)] -= 0.5f * N * (u0[IX(i + 1, j)] - u0[IX(i - 1, j)]);
+			v[IX(i, j)] -= 0.5f * N * (u0[IX(i, j + 1)] - u0[IX(i, j - 1)]);
+		}
+	}
+}
+
 void project_cuda(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, GPUSTATE gpu)
 {
-	int i, j;
 	int size = (N + 2) * (N + 2) * sizeof(fluid);
 	checkCuda(cudaMemcpy(gpu.u, u, size, cudaMemcpyHostToDevice));
 	checkCuda(cudaMemcpy(gpu.v, v, size, cudaMemcpyHostToDevice));
@@ -146,30 +160,21 @@ void project_cuda(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, GPUSTATE gpu)
 	project_cuda_kernel_a<<<N/BLOCKSIZE, BLOCKSIZE>>>(N, gpu.u, gpu.v, gpu.u_prev, gpu.v_prev);
 	checkCuda(cudaGetLastError());
 
-	checkCuda(cudaMemcpy(u, gpu.u, size, cudaMemcpyDeviceToHost));
-	checkCuda(cudaMemcpy(v, gpu.v, size, cudaMemcpyDeviceToHost));
-	// checkCuda(cudaMemcpy(u0, gpu.u_prev, size, cudaMemcpyDeviceToHost));
-	// checkCuda(cudaMemcpy(v0, gpu.v_prev, size, cudaMemcpyDeviceToHost));
-	
-	// set_bnd(N, 0, v0);
-	// set_bnd(N, 0, u0);
 	set_bnd_cuda<<<1, BLOCKSIZE>>>(N, 0, gpu.v_prev);
 	set_bnd_cuda<<<1, BLOCKSIZE>>>(N, 0, gpu.u_prev);
-
-	// checkCuda(cudaMemcpy(gpu.u_prev, u0, size, cudaMemcpyHostToDevice));
-	// checkCuda(cudaMemcpy(gpu.v_prev, v0, size, cudaMemcpyHostToDevice));
 	
 	lin_solve_cuda(N, 0, gpu.u_prev, gpu.v_prev, 1, 4);
-	
+
+	project_cuda_kernel_b<<<N/BLOCKSIZE, BLOCKSIZE>>>(N, gpu.u, gpu.v, gpu.u_prev);
+	checkCuda(cudaGetLastError());
+
+	set_bnd_cuda<<<1, BLOCKSIZE>>>(N, 1, gpu.u);
+	set_bnd_cuda<<<1, BLOCKSIZE>>>(N, 2, gpu.v);
+
 	checkCuda(cudaMemcpy(u0, gpu.u_prev, size, cudaMemcpyDeviceToHost));
 	checkCuda(cudaMemcpy(v0, gpu.v_prev, size, cudaMemcpyDeviceToHost));
-
-	FOR_EACH_CELL
-	u[IX(i, j)] -= 0.5f * N * (u0[IX(i + 1, j)] - u0[IX(i - 1, j)]);
-	v[IX(i, j)] -= 0.5f * N * (u0[IX(i, j + 1)] - u0[IX(i, j - 1)]);
-	END_FOR
-	set_bnd(N, 1, u);
-	set_bnd(N, 2, v);
+	checkCuda(cudaMemcpy(u, gpu.u, size, cudaMemcpyDeviceToHost));
+	checkCuda(cudaMemcpy(v, gpu.v, size, cudaMemcpyDeviceToHost));
 }
 
 void vel_step_cuda(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, float visc, float dt, GPUSTATE gpu)
