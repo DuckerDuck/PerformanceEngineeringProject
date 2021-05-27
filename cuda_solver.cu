@@ -221,9 +221,24 @@ void advect_cuda(int N, int b, fluid *d, fluid *d0, fluid *u, fluid *v, float dt
 	checkCuda(cudaMemcpy(v, gpu.v, size, cudaMemcpyDeviceToHost));
 }
 
+__global__ void add_source_kernel(int N, fluid *x, fluid *s, float dt) {
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	int size = (N + 2) * (N + 2);
+	if (i <= size) {
+		x[i] += dt * s[i];
+	}
+}
+
 void dens_step_cuda(int N, fluid *x, fluid *x0, fluid *u, fluid *v, float diff, float dt, GPUSTATE gpu)
 {
-	add_source(N, x, x0, dt);
+	// add_source(N, x, x0, dt);
+	int size = (N + 2) * (N + 2);
+	checkCuda(cudaMemcpy(gpu.dens, x, size, cudaMemcpyHostToDevice));
+	checkCuda(cudaMemcpy(gpu.dens_prev, x0, size, cudaMemcpyHostToDevice));
+	add_source_kernel<<<N/BLOCKSIZE + 1, BLOCKSIZE>>>(N, gpu.dens, gpu.dens_prev, dt);
+	checkCuda(cudaMemcpy(x, gpu.dens, size, cudaMemcpyDeviceToHost));
+	checkCuda(cudaMemcpy(x0, gpu.dens_prev, size, cudaMemcpyDeviceToHost));
+
 	SWAP(x0, x);
 	diffuse_cuda(N, 0, x, x0, diff, dt, gpu);
 	SWAP(x0, x);
