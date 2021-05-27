@@ -125,8 +125,7 @@ static int cuda_allocate_data(void)
 
 static void step(void)
 {
-	vel_step_cuda(N, u, v, u_prev, v_prev, visc, dt, gpu);
-	dens_step_cuda(N, dens, dens_prev, u, v, diff, dt, gpu);
+	step_cuda(N, u, v, u_prev, v_prev, dens, dens_prev, visc, dt, diff, gpu);
 }
 
 float random_float(float min, float max)

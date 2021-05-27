@@ -229,6 +229,12 @@ __global__ void add_source_kernel(int N, fluid *x, fluid *s, float dt) {
 	}
 }
 
+void step_cuda(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, fluid *x, fluid *x0,  float visc, float dt, float diff, GPUSTATE gpu)
+{
+	dens_step_cuda(N, x, x0, u, v, diff, dt, gpu);
+	vel_step_cuda(N, u, v, u0, v0, visc, dt, gpu);
+}
+
 void dens_step_cuda(int N, fluid *x, fluid *x0, fluid *u, fluid *v, float diff, float dt, GPUSTATE gpu)
 {
 	// add_source(N, x, x0, dt);

@@ -307,9 +307,7 @@ static void reshape_func(int width, int height)
 static void idle_func(void)
 {
 	get_from_UI(dens_prev, u_prev, v_prev);
-	vel_step_cuda(N, u, v, u_prev, v_prev, visc, dt, gpu);
-	dens_step_cuda(N, dens, dens_prev, u, v, diff, dt, gpu);
-
+	step_cuda(N, u, v, u_prev, v_prev, dens, dens_prev, visc, dt, diff, gpu);
 	glutSetWindow(win_id);
 	glutPostRedisplay();
 }
