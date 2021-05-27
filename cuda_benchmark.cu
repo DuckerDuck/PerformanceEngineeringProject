@@ -195,7 +195,7 @@ static void benchmark(int file_N)
 		start_time = get_time();
 		for (s = 0; s < steps; s++)
 		{
-			project_cuda(N, u, v, u_prev, v_prev, gpu);
+			project_cuda(N, gpu.u, gpu.v, gpu.u_prev, gpu.v_prev);
 		}
 		end_time = get_time();
 		project_time += end_time - start_time;
@@ -213,7 +213,7 @@ static void benchmark(int file_N)
 		start_time = get_time();
 		for (s = 0; s < steps; s++)
 		{
-			advect_cuda(N, 0, dens, dens_prev, u, v, dt, gpu);
+			advect_cuda(N, 0, gpu.dens, gpu.dens_prev, gpu.u, gpu.v, dt);
 		}
 		end_time = get_time();
 		advect_time += end_time - start_time;

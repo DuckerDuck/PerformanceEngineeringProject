@@ -94,19 +94,10 @@ void lin_solve_cuda(int N, int b, fluid *x, fluid *x0, float a, float c)
 	
 }
 
-void diffuse_cuda(int N, int b, fluid *x, fluid *x0, float diff, float dt, GPUSTATE gpu)
+void diffuse_cuda(int N, int b, fluid *x, fluid *x0, float diff, float dt)
 {
-	float a = dt * diff * N * N;	
-	int size = (N + 2) * (N + 2) * sizeof(fluid);
-
-	checkCuda(cudaMemcpy(gpu.dens, x, size, cudaMemcpyHostToDevice));
-	checkCuda(cudaMemcpy(gpu.dens_prev, x0, size, cudaMemcpyHostToDevice));
-
-	lin_solve_cuda(N, b, gpu.dens, gpu.dens_prev, a, 1 + 4 * a);
-	
-	checkCuda(cudaMemcpy(x, gpu.dens, size, cudaMemcpyDeviceToHost));
-	checkCuda(cudaMemcpy(x0, gpu.dens_prev, size, cudaMemcpyDeviceToHost));
-
+	float a = dt * diff * N * N;
+	lin_solve_cuda(N, b, x, x0, a, 1 + 4 * a);
 }
 
 __global__ void project_cuda_kernel_a(int N, fluid *u, fluid *v, fluid *u0, fluid *v0) {
@@ -124,7 +115,7 @@ __global__ void project_cuda_kernel_a(int N, fluid *u, fluid *v, fluid *u0, flui
 	}
 }
 
-__global__ void project_cuda_kernel_b(int N, fluid *u, fluid *v, fluid *u0) {
+__global__ void project_cuda_kernel_b(int N, fluid *u, fluid *v, fluid *p) {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	int j;
 	// i starts at 1
@@ -133,38 +124,27 @@ __global__ void project_cuda_kernel_b(int N, fluid *u, fluid *v, fluid *u0) {
 	if (i <= N) {
 		for (j = 1; j <= N; j++) 
 		{
-			u[IX(i, j)] -= 0.5f * N * (u0[IX(i + 1, j)] - u0[IX(i - 1, j)]);
-			v[IX(i, j)] -= 0.5f * N * (u0[IX(i, j + 1)] - u0[IX(i, j - 1)]);
+			u[IX(i, j)] -= 0.5f * N * (p[IX(i + 1, j)] - p[IX(i - 1, j)]);
+			v[IX(i, j)] -= 0.5f * N * (p[IX(i, j + 1)] - p[IX(i, j - 1)]);
 		}
 	}
 }
 
-void project_cuda(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, GPUSTATE gpu)
+void project_cuda(int N, fluid *u, fluid *v, fluid *p, fluid *div)
 {
-	int size = (N + 2) * (N + 2) * sizeof(fluid);
-	checkCuda(cudaMemcpy(gpu.u, u, size, cudaMemcpyHostToDevice));
-	checkCuda(cudaMemcpy(gpu.v, v, size, cudaMemcpyHostToDevice));
-	checkCuda(cudaMemcpy(gpu.u_prev, u0, size, cudaMemcpyHostToDevice));
-	checkCuda(cudaMemcpy(gpu.v_prev, v0, size, cudaMemcpyHostToDevice));
-
-	project_cuda_kernel_a<<<N/BLOCKSIZE, BLOCKSIZE>>>(N, gpu.u, gpu.v, gpu.u_prev, gpu.v_prev);
+	project_cuda_kernel_a<<<N/BLOCKSIZE + 1, BLOCKSIZE>>>(N, u, v, p, div);
 	checkCuda(cudaGetLastError());
 
-	set_bnd_cuda<<<1, BLOCKSIZE>>>(N, 0, gpu.v_prev);
-	set_bnd_cuda<<<1, BLOCKSIZE>>>(N, 0, gpu.u_prev);
+	set_bnd_cuda<<<1, BLOCKSIZE>>>(N, 0, div);
+	set_bnd_cuda<<<1, BLOCKSIZE>>>(N, 0, p);
 	
-	lin_solve_cuda(N, 0, gpu.u_prev, gpu.v_prev, 1, 4);
+	lin_solve_cuda(N, 0, p, div, 1, 4);
 
-	project_cuda_kernel_b<<<N/BLOCKSIZE, BLOCKSIZE>>>(N, gpu.u, gpu.v, gpu.u_prev);
+	project_cuda_kernel_b<<<N/BLOCKSIZE + 1, BLOCKSIZE>>>(N, u, v, p);
 	checkCuda(cudaGetLastError());
 
-	set_bnd_cuda<<<1, BLOCKSIZE>>>(N, 1, gpu.u);
-	set_bnd_cuda<<<1, BLOCKSIZE>>>(N, 2, gpu.v);
-
-	checkCuda(cudaMemcpy(u0, gpu.u_prev, size, cudaMemcpyDeviceToHost));
-	checkCuda(cudaMemcpy(v0, gpu.v_prev, size, cudaMemcpyDeviceToHost));
-	checkCuda(cudaMemcpy(u, gpu.u, size, cudaMemcpyDeviceToHost));
-	checkCuda(cudaMemcpy(v, gpu.v, size, cudaMemcpyDeviceToHost));
+	set_bnd_cuda<<<1, BLOCKSIZE>>>(N, 1, u);
+	set_bnd_cuda<<<1, BLOCKSIZE>>>(N, 2, v);
 }
 
 __global__ void advect_kernel(int N, fluid *d, fluid *d0, fluid *u, fluid *v, float dt)
@@ -204,65 +184,74 @@ __global__ void advect_kernel(int N, fluid *d, fluid *d0, fluid *u, fluid *v, fl
 	}
 }
 
-void advect_cuda(int N, int b, fluid *d, fluid *d0, fluid *u, fluid *v, float dt, GPUSTATE gpu)
+void advect_cuda(int N, int b, fluid *d, fluid *d0, fluid *u, fluid *v, float dt)
 {
-	int size = (N + 2) * (N + 2) * sizeof(fluid);
-	checkCuda(cudaMemcpy(gpu.dens, d, size, cudaMemcpyHostToDevice));
-	checkCuda(cudaMemcpy(gpu.dens_prev, d0, size, cudaMemcpyHostToDevice));
-	checkCuda(cudaMemcpy(gpu.u, u, size, cudaMemcpyHostToDevice));
-	checkCuda(cudaMemcpy(gpu.v, v, size, cudaMemcpyHostToDevice));
+	advect_kernel<<<N/BLOCKSIZE + 1, BLOCKSIZE>>>(N, d, d0, u, v, dt);
+	checkCuda(cudaGetLastError());
 
-	advect_kernel<<<N/BLOCKSIZE, BLOCKSIZE>>>(N, gpu.dens, gpu.dens_prev, gpu.u, gpu.v, dt);
-	set_bnd_cuda<<<1, BLOCKSIZE>>>(N, b, gpu.dens);
-
-	checkCuda(cudaMemcpy(d, gpu.dens, size, cudaMemcpyDeviceToHost));
-	checkCuda(cudaMemcpy(d0, gpu.dens_prev, size, cudaMemcpyDeviceToHost));
-	checkCuda(cudaMemcpy(u, gpu.u, size, cudaMemcpyDeviceToHost));
-	checkCuda(cudaMemcpy(v, gpu.v, size, cudaMemcpyDeviceToHost));
+	set_bnd_cuda<<<1, BLOCKSIZE>>>(N, b, d);
+	checkCuda(cudaGetLastError());
 }
 
-__global__ void add_source_kernel(int N, fluid *x, fluid *s, float dt) {
+__global__ void add_source_kernel(int size, fluid *x, fluid *s, float dt) {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
-	int size = (N + 2) * (N + 2);
-	if (i <= size) {
+	if (i < size) {
 		x[i] += dt * s[i];
 	}
 }
 
-void step_cuda(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, fluid *x, fluid *x0,  float visc, float dt, float diff, GPUSTATE gpu)
+void add_source_cuda(int N, fluid *x, fluid *s, float dt)
 {
-	dens_step_cuda(N, x, x0, u, v, diff, dt, gpu);
-	vel_step_cuda(N, u, v, u0, v0, visc, dt, gpu);
+	int size = (N + 2) * (N + 2);
+	add_source_kernel<<<size/BLOCKSIZE + 1, BLOCKSIZE>>>(size, x, s, dt);
+	checkCuda(cudaGetLastError());
 }
 
-void dens_step_cuda(int N, fluid *x, fluid *x0, fluid *u, fluid *v, float diff, float dt, GPUSTATE gpu)
+void step_cuda(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, fluid *x, fluid *x0,  float visc, float dt, float diff, GPUSTATE gpu)
 {
-	// add_source(N, x, x0, dt);
 	int size = (N + 2) * (N + 2);
 	checkCuda(cudaMemcpy(gpu.dens, x, size, cudaMemcpyHostToDevice));
 	checkCuda(cudaMemcpy(gpu.dens_prev, x0, size, cudaMemcpyHostToDevice));
-	add_source_kernel<<<N/BLOCKSIZE + 1, BLOCKSIZE>>>(N, gpu.dens, gpu.dens_prev, dt);
+	checkCuda(cudaMemcpy(gpu.u, u, size, cudaMemcpyHostToDevice));
+	checkCuda(cudaMemcpy(gpu.u_prev, u0, size, cudaMemcpyHostToDevice));
+	checkCuda(cudaMemcpy(gpu.v, v, size, cudaMemcpyHostToDevice));
+	checkCuda(cudaMemcpy(gpu.v_prev, v0, size, cudaMemcpyHostToDevice));
+
+	vel_step_cuda(N, gpu.u, gpu.v, gpu.u_prev, gpu.v_prev, visc, dt);
+	dens_step_cuda(N, gpu.dens, gpu.dens_prev, gpu.u, gpu.v, diff, dt);
+
 	checkCuda(cudaMemcpy(x, gpu.dens, size, cudaMemcpyDeviceToHost));
 	checkCuda(cudaMemcpy(x0, gpu.dens_prev, size, cudaMemcpyDeviceToHost));
+	checkCuda(cudaMemcpy(u, gpu.u, size, cudaMemcpyDeviceToHost));
+	checkCuda(cudaMemcpy(u0, gpu.u_prev, size, cudaMemcpyDeviceToHost));
+	checkCuda(cudaMemcpy(v, gpu.v, size, cudaMemcpyDeviceToHost));
+	checkCuda(cudaMemcpy(v0, gpu.v_prev, size, cudaMemcpyDeviceToHost));
 
-	SWAP(x0, x);
-	diffuse_cuda(N, 0, x, x0, diff, dt, gpu);
-	SWAP(x0, x);
-	advect_cuda(N, 0, x, x0, u, v, dt, gpu);
 }
 
-void vel_step_cuda(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, float visc, float dt, GPUSTATE gpu)
+
+void dens_step_cuda(int N, fluid *x, fluid *x0, fluid *u, fluid *v, float diff, float dt)
 {
-	add_source(N, u, u0, dt);
-	add_source(N, v, v0, dt);
+	add_source_cuda(N, x, x0, dt);
+	SWAP(x0, x);
+	diffuse_cuda(N, 0, x, x0, diff, dt);
+	SWAP(x0, x);
+	advect_cuda(N, 0, x, x0, u, v, dt);
+}
+
+
+void vel_step_cuda(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, float visc, float dt)
+{
+	add_source_cuda(N, u, u0, dt);
+	add_source_cuda(N, v, v0, dt);
 	SWAP(u0, u);
-	diffuse_cuda(N, 1, u, u0, visc, dt, gpu);
+	diffuse_cuda(N, 1, u, u0, visc, dt);
 	SWAP(v0, v);
-	diffuse_cuda(N, 2, v, v0, visc, dt, gpu);
-	project_cuda(N, u, v, u0, v0, gpu);
+	diffuse_cuda(N, 2, v, v0, visc, dt);
+	project_cuda(N, u, v, u0, v0);
 	SWAP(u0, u);
 	SWAP(v0, v);
-	advect_cuda(N, 1, u, u0, u0, v0, dt, gpu);
-	advect_cuda(N, 2, v, v0, u0, v0, dt, gpu);
-	project_cuda(N, u, v, u0, v0, gpu);
+	advect_cuda(N, 1, u, u0, u0, v0, dt);
+	advect_cuda(N, 2, v, v0, u0, v0, dt);
+	project_cuda(N, u, v, u0, v0);
 }
