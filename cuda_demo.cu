@@ -87,14 +87,26 @@ static int cuda_allocate_data(void)
 {
 	int size = (N + 2) * (N + 2) * sizeof(fluid);
 	
-	gpu.a = NULL;
-	checkCuda(cudaMalloc((void **) &gpu.a, size));
+	gpu.u = NULL;
+	checkCuda(cudaMalloc((void **) &gpu.u, size));
 	
-	gpu.b = NULL;
-	checkCuda(cudaMalloc((void **) &gpu.b, size));
+	gpu.v = NULL;
+	checkCuda(cudaMalloc((void **) &gpu.v, size));
+	
+	gpu.u_prev = NULL;
+	checkCuda(cudaMalloc((void **) &gpu.u_prev, size));
 
-	if (!gpu.a || !gpu.b) 
-	{
+	gpu.v_prev = NULL;
+	checkCuda(cudaMalloc((void **) &gpu.v_prev, size));
+
+	gpu.dens = NULL;
+	checkCuda(cudaMalloc((void **) &gpu.dens, size));
+
+	gpu.dens_prev = NULL;
+	checkCuda(cudaMalloc((void **) &gpu.dens_prev, size));
+
+	if (!gpu.u || !gpu.v || !gpu.u_prev || 
+		!gpu.v_prev || !gpu.dens || !gpu.dens_prev ) {
 		return 0;
 	}
 	return 1;

@@ -77,45 +77,37 @@ __global__ void set_bnd_cuda(int N, int b, fluid *x)
 	x[IX(N + 1, N + 1)] = 0.5f * (x[IX(N, N + 1)] + x[IX(N + 1, N)]);
 }
 
-void to_device(int N, fluid* a, fluid* b, GPUSTATE gpu)
-{
-	int size = (N + 2) * (N + 2) * sizeof(fluid);
-	
-	checkCuda(cudaMemcpy(gpu.a, a, size, cudaMemcpyHostToDevice));
-	checkCuda(cudaMemcpy(gpu.b, b, size, cudaMemcpyHostToDevice));
-}
 
-void to_host(int N, fluid* a, fluid* b, GPUSTATE gpu)
-{
-	int size = (N + 2) * (N + 2) * sizeof(fluid);
-	
-	checkCuda(cudaMemcpy(a, gpu.a, size, cudaMemcpyDeviceToHost));
-	checkCuda(cudaMemcpy(b, gpu.b, size, cudaMemcpyDeviceToHost));
-
-}
-
-void lin_solve_cuda(int N, int b, fluid *x, fluid *x0, float a, float c, GPUSTATE gpu)
+void lin_solve_cuda(int N, int b, fluid *x, fluid *x0, float a, float c)
 {	
 	int k;
 
-	to_device(N, x, x0, gpu);
 	for (k = 0; k < 20; k++)
 	{
-		LINSOLVE_KERNEL<<<N/BLOCKSIZE + 1, BLOCKSIZE>>>(N, gpu.a, gpu.b, a, c);
+		LINSOLVE_KERNEL<<<N/BLOCKSIZE + 1, BLOCKSIZE>>>(N, x, x0, a, c);
 		checkCuda(cudaGetLastError());
 		
 		// No parallelization here, this simply prevents us from 
 		// copying memory from/to host 20 times
-		set_bnd_cuda<<<1, BLOCKSIZE>>>(N, b, gpu.a);
+		set_bnd_cuda<<<1, BLOCKSIZE>>>(N, b, x);
 		checkCuda(cudaGetLastError());
 	}
-	to_host(N, x, x0, gpu);
+	
 }
 
 void diffuse_cuda(int N, int b, fluid *x, fluid *x0, float diff, float dt, GPUSTATE gpu)
 {
-	float a = dt * diff * N * N;
-	lin_solve_cuda(N, b, x, x0, a, 1 + 4 * a, gpu);
+	float a = dt * diff * N * N;	
+	int size = (N + 2) * (N + 2) * sizeof(fluid);
+
+	checkCuda(cudaMemcpy(gpu.dens, x, size, cudaMemcpyHostToDevice));
+	checkCuda(cudaMemcpy(gpu.dens_prev, x0, size, cudaMemcpyHostToDevice));
+
+	lin_solve_cuda(N, b, gpu.dens, gpu.dens_prev, a, 1 + 4 * a);
+	
+	checkCuda(cudaMemcpy(x, gpu.dens, size, cudaMemcpyDeviceToHost));
+	checkCuda(cudaMemcpy(x0, gpu.dens_prev, size, cudaMemcpyDeviceToHost));
+
 }
 
 void dens_step_cuda(int N, fluid *x, fluid *x0, fluid *u, fluid *v, float diff, float dt, GPUSTATE gpu)
@@ -127,22 +119,54 @@ void dens_step_cuda(int N, fluid *x, fluid *x0, fluid *u, fluid *v, float diff, 
 	advect(N, 0, x, x0, u, v, dt);
 }
 
-void project_cuda(int N, fluid *u, fluid *v, fluid *p, fluid *div, GPUSTATE gpu)
+__global__ void project_cuda_kernel_a(int N, fluid *u, fluid *v, fluid *u0, fluid *v0) {
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	int j;
+	// i starts at 1
+	i += 1;
+	
+	if (i <= N) {
+		for (j = 1; j <= N; j++) 
+		{
+			v0[IX(i, j)] = -0.5f * (u[IX(i + 1, j)] - u[IX(i - 1, j)] + v[IX(i, j + 1)] - v[IX(i, j - 1)]) / N;
+			u0[IX(i, j)] = 0;
+		}
+	}
+}
+
+void project_cuda(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, GPUSTATE gpu)
 {
 	int i, j;
+	int size = (N + 2) * (N + 2) * sizeof(fluid);
+	checkCuda(cudaMemcpy(gpu.u, u, size, cudaMemcpyHostToDevice));
+	checkCuda(cudaMemcpy(gpu.v, v, size, cudaMemcpyHostToDevice));
+	checkCuda(cudaMemcpy(gpu.u_prev, u0, size, cudaMemcpyHostToDevice));
+	checkCuda(cudaMemcpy(gpu.v_prev, v0, size, cudaMemcpyHostToDevice));
+
+	project_cuda_kernel_a<<<N/BLOCKSIZE, BLOCKSIZE>>>(N, gpu.u, gpu.v, gpu.u_prev, gpu.v_prev);
+	checkCuda(cudaGetLastError());
+
+	checkCuda(cudaMemcpy(u, gpu.u, size, cudaMemcpyDeviceToHost));
+	checkCuda(cudaMemcpy(v, gpu.v, size, cudaMemcpyDeviceToHost));
+	// checkCuda(cudaMemcpy(u0, gpu.u_prev, size, cudaMemcpyDeviceToHost));
+	// checkCuda(cudaMemcpy(v0, gpu.v_prev, size, cudaMemcpyDeviceToHost));
+	
+	// set_bnd(N, 0, v0);
+	// set_bnd(N, 0, u0);
+	set_bnd_cuda<<<1, BLOCKSIZE>>>(N, 0, gpu.v_prev);
+	set_bnd_cuda<<<1, BLOCKSIZE>>>(N, 0, gpu.u_prev);
+
+	// checkCuda(cudaMemcpy(gpu.u_prev, u0, size, cudaMemcpyHostToDevice));
+	// checkCuda(cudaMemcpy(gpu.v_prev, v0, size, cudaMemcpyHostToDevice));
+	
+	lin_solve_cuda(N, 0, gpu.u_prev, gpu.v_prev, 1, 4);
+	
+	checkCuda(cudaMemcpy(u0, gpu.u_prev, size, cudaMemcpyDeviceToHost));
+	checkCuda(cudaMemcpy(v0, gpu.v_prev, size, cudaMemcpyDeviceToHost));
 
 	FOR_EACH_CELL
-	div[IX(i, j)] = -0.5f * (u[IX(i + 1, j)] - u[IX(i - 1, j)] + v[IX(i, j + 1)] - v[IX(i, j - 1)]) / N;
-	p[IX(i, j)] = 0;
-	END_FOR
-	set_bnd(N, 0, div);
-	set_bnd(N, 0, p);
-
-	lin_solve_cuda(N, 0, p, div, 1, 4, gpu);
-
-	FOR_EACH_CELL
-	u[IX(i, j)] -= 0.5f * N * (p[IX(i + 1, j)] - p[IX(i - 1, j)]);
-	v[IX(i, j)] -= 0.5f * N * (p[IX(i, j + 1)] - p[IX(i, j - 1)]);
+	u[IX(i, j)] -= 0.5f * N * (u0[IX(i + 1, j)] - u0[IX(i - 1, j)]);
+	v[IX(i, j)] -= 0.5f * N * (u0[IX(i, j + 1)] - u0[IX(i, j - 1)]);
 	END_FOR
 	set_bnd(N, 1, u);
 	set_bnd(N, 2, v);

@@ -98,14 +98,26 @@ static int cuda_allocate_data(void)
 {
 	int size = (N + 2) * (N + 2) * sizeof(fluid);
 	
-	gpu.a = NULL;
-	checkCuda(cudaMalloc((void **) &gpu.a, size));
+	gpu.u = NULL;
+	checkCuda(cudaMalloc((void **) &gpu.u, size));
 	
-	gpu.b = NULL;
-	checkCuda(cudaMalloc((void **) &gpu.b, size));
+	gpu.v = NULL;
+	checkCuda(cudaMalloc((void **) &gpu.v, size));
 	
-	if (!gpu.a || !gpu.b) 
-	{
+	gpu.u_prev = NULL;
+	checkCuda(cudaMalloc((void **) &gpu.u_prev, size));
+
+	gpu.v_prev = NULL;
+	checkCuda(cudaMalloc((void **) &gpu.v_prev, size));
+
+	gpu.dens = NULL;
+	checkCuda(cudaMalloc((void **) &gpu.dens, size));
+
+	gpu.dens_prev = NULL;
+	checkCuda(cudaMalloc((void **) &gpu.dens_prev, size));
+
+	if (!gpu.u || !gpu.v || !gpu.u_prev || 
+		!gpu.v_prev || !gpu.dens || !gpu.dens_prev ) {
 		return 0;
 	}
 	return 1;
@@ -193,7 +205,7 @@ static void benchmark(int file_N)
 		start_time = get_time();
 		for (s = 0; s < steps; s++)
 		{
-			lin_solve_cuda(N, 0, dens, dens_prev, 1, 4, gpu);
+			lin_solve_cuda(N, 0, gpu.dens, gpu.dens_prev, 1, 4);
 		}
 		end_time = get_time();
 		lin_solve_time += end_time - start_time;
@@ -219,8 +231,9 @@ static void benchmark(int file_N)
 		start_time = get_time();
 		for (s = 0; s < steps; s++)
 		{
-			to_device(N, dens, dens_prev, gpu);
-			to_host(N, dens, dens_prev, gpu);
+			int size = (N + 2) * (N + 2) * sizeof(fluid);
+			checkCuda(cudaMemcpy(gpu.u, u, size, cudaMemcpyHostToDevice));
+			checkCuda(cudaMemcpy(u, gpu.u, size, cudaMemcpyDeviceToHost));
 		}
 		end_time = get_time();
 		cuda_copy += end_time - start_time;

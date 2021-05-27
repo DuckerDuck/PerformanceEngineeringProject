@@ -11,17 +11,18 @@
 #define BLOCKSIZE 16
 
 typedef struct GPUSTATE {
-	fluid *a, *b;
+	fluid *u, *v, *u_prev, *v_prev;
+	fluid *dens, *dens_prev;
 } GPUSTATE;
 
 void vel_step_cuda(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, float visc, float dt, GPUSTATE gpu);
 void dens_step_cuda(int N, fluid *x, fluid *x0, fluid *u, fluid *v, float diff, float dt, GPUSTATE gpu);
 
-void lin_solve_cuda(int N, int b, fluid *x, fluid *x0, float a, float c, GPUSTATE gpu);
+void lin_solve_cuda(int N, int b, fluid *x, fluid *x0, float a, float c);
 void diffuse_cuda(int N, int b, fluid *x, fluid *x0, float diff, float dt, GPUSTATE gpu);
 void project_cuda(int N, fluid *u, fluid *v, fluid *p, fluid *div, GPUSTATE gpu);
-void to_device(int N, fluid* a, fluid* b, GPUSTATE gpu);
-void to_host(int N, fluid* a, fluid* b, GPUSTATE gpu);
+
+
 
 void checkCuda(cudaError_t result);
 #endif
