@@ -51,17 +51,17 @@ double get_time()
 static void free_data(void)
 {
 	if (u)
-		free(u);
+		cudaFreeHost(u);
 	if (v)
-		free(v);
+		cudaFreeHost(v);
 	if (u_prev)
-		free(u_prev);
+		cudaFreeHost(u_prev);
 	if (v_prev)
-		free(v_prev);
+		cudaFreeHost(v_prev);
 	if (dens)
-		free(dens);
+		cudaFreeHost(dens);
 	if (dens_prev)
-		free(dens_prev);
+		cudaFreeHost(dens_prev);
 }
 
 static void clear_data(void)
@@ -76,14 +76,14 @@ static void clear_data(void)
 
 static int allocate_data(void)
 {
-	int size = (N + 2) * (N + 2);
+	int size = (N + 2) * (N + 2) * sizeof(fluid);
 
-	u = (fluid *)malloc(size * sizeof(fluid));
-	v = (fluid *)malloc(size * sizeof(fluid));
-	u_prev = (fluid *)malloc(size * sizeof(fluid));
-	v_prev = (fluid *)malloc(size * sizeof(fluid));
-	dens = (fluid *)malloc(size * sizeof(fluid));
-	dens_prev = (fluid *)malloc(size * sizeof(fluid));
+	checkCuda(cudaMallocHost((void**)&u, size));
+	checkCuda(cudaMallocHost((void**)&v, size));
+	checkCuda(cudaMallocHost((void**)&u_prev, size));
+	checkCuda(cudaMallocHost((void**)&v_prev, size));
+	checkCuda(cudaMallocHost((void**)&dens, size));
+	checkCuda(cudaMallocHost((void**)&dens_prev, size));
 
 	if (!u || !v || !u_prev || !v_prev || !dens || !dens_prev)
 	{
@@ -222,7 +222,7 @@ static void benchmark(int file_N)
 		start_time = get_time();
 		for (s = 0; s < steps; s++)
 		{
-			add_source(N, u, u_prev, dt);
+			add_source_cuda(N, u, u_prev, dt);
 		}
 		end_time = get_time();
 		add_source_time += end_time - start_time;

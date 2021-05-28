@@ -60,7 +60,8 @@ __global__ void lin_solve_kernel_half(int N, fluid *x, fluid *x0, float a, float
 	}
 }
 
-__global__ void set_bnd_cuda(int N, int b, fluid *x)
+
+__global__ void set_bnd_kernel(int N, int b, fluid *x)
 {
 	int i;
 
@@ -77,6 +78,12 @@ __global__ void set_bnd_cuda(int N, int b, fluid *x)
 	x[IX(N + 1, N + 1)] = 0.5f * (x[IX(N, N + 1)] + x[IX(N + 1, N)]);
 }
 
+void set_bnd_cuda(int N, int b, fluid *x)
+{
+	set_bnd_kernel<<<1, 1>>>(N, b, x);
+	checkCuda(cudaGetLastError());
+}
+
 void lin_solve_cuda(int N, int b, fluid *x, fluid *x0, float a, float c)
 {	
 	int k;
@@ -88,7 +95,7 @@ void lin_solve_cuda(int N, int b, fluid *x, fluid *x0, float a, float c)
 		
 		// No parallelization here, this simply prevents us from 
 		// copying memory from/to host 20 times
-		set_bnd_cuda<<<1, BLOCKSIZE>>>(N, b, x);
+		set_bnd_cuda(N, b, x);
 		checkCuda(cudaGetLastError());
 	}
 	
@@ -135,16 +142,16 @@ void project_cuda(int N, fluid *u, fluid *v, fluid *p, fluid *div)
 	project_cuda_kernel_a<<<N/BLOCKSIZE + 1, BLOCKSIZE>>>(N, u, v, p, div);
 	checkCuda(cudaGetLastError());
 
-	set_bnd_cuda<<<1, BLOCKSIZE>>>(N, 0, div);
-	set_bnd_cuda<<<1, BLOCKSIZE>>>(N, 0, p);
+	set_bnd_cuda(N, 0, div);
+	set_bnd_cuda(N, 0, p);
 	
 	lin_solve_cuda(N, 0, p, div, 1, 4);
 
 	project_cuda_kernel_b<<<N/BLOCKSIZE + 1, BLOCKSIZE>>>(N, u, v, p);
 	checkCuda(cudaGetLastError());
 
-	set_bnd_cuda<<<1, BLOCKSIZE>>>(N, 1, u);
-	set_bnd_cuda<<<1, BLOCKSIZE>>>(N, 2, v);
+	set_bnd_cuda(N, 1, u);
+	set_bnd_cuda(N, 2, v);
 }
 
 __global__ void advect_kernel(int N, fluid *d, fluid *d0, fluid *u, fluid *v, float dt)
@@ -189,7 +196,7 @@ void advect_cuda(int N, int b, fluid *d, fluid *d0, fluid *u, fluid *v, float dt
 	advect_kernel<<<N/BLOCKSIZE + 1, BLOCKSIZE>>>(N, d, d0, u, v, dt);
 	checkCuda(cudaGetLastError());
 
-	set_bnd_cuda<<<1, BLOCKSIZE>>>(N, b, d);
+	set_bnd_cuda(N, b, d);
 	checkCuda(cudaGetLastError());
 }
 
@@ -209,23 +216,25 @@ void add_source_cuda(int N, fluid *x, fluid *s, float dt)
 
 void step_cuda(int N, fluid *u, fluid *v, fluid *u0, fluid *v0, fluid *x, fluid *x0,  float visc, float dt, float diff, GPUSTATE gpu)
 {
-	int size = (N + 2) * (N + 2);
-	checkCuda(cudaMemcpy(gpu.dens, x, size, cudaMemcpyHostToDevice));
-	checkCuda(cudaMemcpy(gpu.dens_prev, x0, size, cudaMemcpyHostToDevice));
-	checkCuda(cudaMemcpy(gpu.u, u, size, cudaMemcpyHostToDevice));
-	checkCuda(cudaMemcpy(gpu.u_prev, u0, size, cudaMemcpyHostToDevice));
-	checkCuda(cudaMemcpy(gpu.v, v, size, cudaMemcpyHostToDevice));
-	checkCuda(cudaMemcpy(gpu.v_prev, v0, size, cudaMemcpyHostToDevice));
+	int size = (N + 2) * (N + 2) * sizeof(fluid);
+	checkCuda(cudaMemcpyAsync(gpu.dens, x, size, cudaMemcpyHostToDevice));
+	checkCuda(cudaMemcpyAsync(gpu.dens_prev, x0, size, cudaMemcpyHostToDevice));
+	checkCuda(cudaMemcpyAsync(gpu.u, u, size, cudaMemcpyHostToDevice));
+	checkCuda(cudaMemcpyAsync(gpu.u_prev, u0, size, cudaMemcpyHostToDevice));
+	checkCuda(cudaMemcpyAsync(gpu.v, v, size, cudaMemcpyHostToDevice));
+	checkCuda(cudaMemcpyAsync(gpu.v_prev, v0, size, cudaMemcpyHostToDevice));
+	cudaDeviceSynchronize();
 
 	vel_step_cuda(N, gpu.u, gpu.v, gpu.u_prev, gpu.v_prev, visc, dt);
 	dens_step_cuda(N, gpu.dens, gpu.dens_prev, gpu.u, gpu.v, diff, dt);
 
-	checkCuda(cudaMemcpy(x, gpu.dens, size, cudaMemcpyDeviceToHost));
-	checkCuda(cudaMemcpy(x0, gpu.dens_prev, size, cudaMemcpyDeviceToHost));
-	checkCuda(cudaMemcpy(u, gpu.u, size, cudaMemcpyDeviceToHost));
-	checkCuda(cudaMemcpy(u0, gpu.u_prev, size, cudaMemcpyDeviceToHost));
-	checkCuda(cudaMemcpy(v, gpu.v, size, cudaMemcpyDeviceToHost));
-	checkCuda(cudaMemcpy(v0, gpu.v_prev, size, cudaMemcpyDeviceToHost));
+	checkCuda(cudaMemcpyAsync(x, gpu.dens, size, cudaMemcpyDeviceToHost));
+	checkCuda(cudaMemcpyAsync(x0, gpu.dens_prev, size, cudaMemcpyDeviceToHost));
+	checkCuda(cudaMemcpyAsync(u, gpu.u, size, cudaMemcpyDeviceToHost));
+	checkCuda(cudaMemcpyAsync(u0, gpu.u_prev, size, cudaMemcpyDeviceToHost));
+	checkCuda(cudaMemcpyAsync(v, gpu.v, size, cudaMemcpyDeviceToHost));
+	checkCuda(cudaMemcpyAsync(v0, gpu.v_prev, size, cudaMemcpyDeviceToHost));
+	cudaDeviceSynchronize();
 
 }
 

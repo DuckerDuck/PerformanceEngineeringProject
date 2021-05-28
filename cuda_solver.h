@@ -24,7 +24,7 @@ void lin_solve_cuda(int N, int b, fluid *x, fluid *x0, float a, float c);
 void diffuse_cuda(int N, int b, fluid *x, fluid *x0, float diff, float dt);
 void project_cuda(int N, fluid *u, fluid *v, fluid *p, fluid *div);
 void advect_cuda(int N, int b, fluid *d, fluid *d0, fluid *u, fluid *v, float dt);
-
+void add_source_cuda(int N, fluid *x, fluid *s, float dt);
 
 
 void checkCuda(cudaError_t result);
