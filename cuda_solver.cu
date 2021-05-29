@@ -16,8 +16,6 @@ void checkCuda(cudaError_t result)
 
 __global__ void lin_solve_kernel(int N, fluid *x, fluid *x0, float a, float c) 
 {
-	// int i = blockDim.x * blockIdx.x + threadIdx.x;
-	// int j;
 	int i = threadIdx.x + blockIdx.x * blockDim.x; 
 	int j = threadIdx.y + blockIdx.y * blockDim.y; 
 	fluid tmp = 0;
@@ -34,29 +32,27 @@ __global__ void lin_solve_kernel(int N, fluid *x, fluid *x0, float a, float c)
 
 __global__ void lin_solve_kernel_half(int N, fluid *x, fluid *x0, float a, float c) 
 {
-	int i = blockDim.x * blockIdx.x + threadIdx.x;
-	int j;
+	int i = threadIdx.x + blockIdx.x * blockDim.x;
+	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	
 	half ha = __float2half(a);
 	half ca = __float2half(c);
 	half tmp, k, l, m, o, p;
 	
-	// i starts at 1
+	// i  and j start at 1
 	i += 1;
+	j += 1;
 
-	if (i <= N) {
-		for (j = 1; j <= N; j++) 
-		{
-			k = __float2half(x0[IX(i, j)]);
-			l = __float2half(x[IX(i - 1, j)]);
-			m = __float2half(x[IX(i + 1, j)]);
-			o = __float2half(x[IX(i, j - 1)]);
-			p = __float2half(x[IX(i, j + 1)]);
-			// tmp = k + ha * (l + m + o + p);
-			tmp = __hfma(ha, __hadd(__hadd(__hadd(l, m), o), p), k);
-			
-			x[IX(i, j)] = __half2float(tmp / ca);
-		}
+	if (i <= N && j <= N) {
+		k = __float2half(x0[IX(i, j)]);
+		l = __float2half(x[IX(i - 1, j)]);
+		m = __float2half(x[IX(i + 1, j)]);
+		o = __float2half(x[IX(i, j - 1)]);
+		p = __float2half(x[IX(i, j + 1)]);
+		// tmp = k + ha * (l + m + o + p);
+		tmp = __hfma(ha, __hadd(__hadd(__hadd(l, m), o), p), k);
+		
+		x[IX(i, j)] = __half2float(tmp / ca);
 	}
 }
 
