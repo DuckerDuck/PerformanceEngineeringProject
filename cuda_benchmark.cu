@@ -330,7 +330,7 @@ int main(int argc, char **argv)
 	printf("Arguments: dt=%g diff=%g visc=%g force=%g source=%g steps=%d runs=%d\n",
 		   dt, diff, visc, force, source, steps, runs);
 
-	for (int i = 128; i <= 1024; i += 64)
+	for (int i = 128; i < 1024; i += 64)
 		benchmark(i);
 	
 	free_data();
