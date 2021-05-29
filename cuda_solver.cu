@@ -61,17 +61,22 @@ __global__ void lin_solve_kernel_half(int N, fluid *x, fluid *x0, float a, float
 }
 
 
-__global__ void set_bnd_kernel(int N, int b, fluid *x)
+__global__ void set_bnd_kernel_a(int N, int b, fluid *x)
 {
-	int i;
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	i += 1;
 
-	for (i = 1; i <= N; i++)
+	if (i <= N)
 	{
 		x[IX(0, i)] = b == 1 ? -x[IX(1, i)] : x[IX(1, i)];
 		x[IX(N + 1, i)] = b == 1 ? -x[IX(N, i)] : x[IX(N, i)];
 		x[IX(i, 0)] = b == 2 ? -x[IX(i, 1)] : x[IX(i, 1)];
 		x[IX(i, N + 1)] = b == 2 ? -x[IX(i, N)] : x[IX(i, N)];
 	}
+}
+
+__global__ void set_bnd_kernel_b(int N, fluid *x)
+{
 	x[IX(0, 0)] = 0.5f * (x[IX(1, 0)] + x[IX(0, 1)]);
 	x[IX(0, N + 1)] = 0.5f * (x[IX(1, N + 1)] + x[IX(0, N)]);
 	x[IX(N + 1, 0)] = 0.5f * (x[IX(N, 0)] + x[IX(N + 1, 1)]);
@@ -80,7 +85,11 @@ __global__ void set_bnd_kernel(int N, int b, fluid *x)
 
 void set_bnd_cuda(int N, int b, fluid *x)
 {
-	set_bnd_kernel<<<1, 1>>>(N, b, x);
+	set_bnd_kernel_a<<<N/BLOCKSIZE + 1, BLOCKSIZE>>>(N, b, x);
+	checkCuda(cudaGetLastError());
+	
+	// No parallelism here
+	set_bnd_kernel_b<<<1, 1>>>(N, x);
 	checkCuda(cudaGetLastError());
 }
 
