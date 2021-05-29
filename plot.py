@@ -54,7 +54,7 @@ def project(n, ls_c, proj_c, p):
     return lin_solve(n, ls_c, p) + (2 * n * n * proj_c)
 
 def project_cuda(n, ls_c, proj_c, p):
-    """ Analytical model for project function
+    """ Analytical model for project function for second cuda model
     n: grid size
     ls_c: lin solve kernel constant
     proj_c: project kernel constant
@@ -85,21 +85,22 @@ def total(n, adv_c, src_c, proj_c, ls_c, p=1):
            3 * lin_solve(n, ls_c, p) + \
            3 * advect(n, adv_c)
 
-def total_cuda_1(n, adv_c, src_c, proj_c, ls_c, cpy_c, p):
-    """ CUDA analytical model 1 """
+def total_cuda(n, adv_c, src_c, proj_c, ls_c, cpy_c, p):
+    """ CUDA analytical model """
     return 3 * add_source(n, src_c) + \
            2 * project(n, ls_c, proj_c, p) + \
            3 * lin_solve(n, ls_c, p) + \
            3 * advect(n, adv_c) + \
-           5 * copy_mem(n, cpy_c)
+           6 * copy_mem(n, cpy_c)
 
 def total_cuda_new(n, adv_c, src_c, proj_c, ls_c, cpy_c, p):
-    """ CUDA analytical model 2 """
+    """ CUDA analytical model v2"""
     return 3 * add_source(n, src_c, p) + \
            2 * project_cuda(n, ls_c, proj_c, p) + \
            3 * lin_solve(n, ls_c, p) + \
            3 * advect(n, adv_c, p) + \
            6 * copy_mem(n, cpy_c)
+
 
 def plot():
     plt.rcParams.update({'font.size': 12})
@@ -116,17 +117,26 @@ def plot():
     P, y_cuda_total = parse_output(output_cuda, 'threads', 'total step')
     _, y_cuda_linsolve = parse_output(output_cuda, 'threads', 'lin_solve')
 
-    # Data first parallel model  + fp16
+    # Data first parallel model + fp16
     _, y_cuda_fp16_total = parse_output(Path('./output_cuda_fp16'), 'threads', 'total step')
     _, y_cuda_fp16_linsolve = parse_output(Path('./output_cuda_fp16'), 'threads', 'lin_solve')
 
+
     # Data fully parallel model + async memory transfers
-    output_cuda_new = Path('./output_cuda_new')
+    output_cuda_new = Path('./output_cuda_new_3')
+    _, y_cuda_cpy = parse_output(output_cuda_new, 'N', 'CUDA copy')
+    
     _, y_cuda_new_total = parse_output(output_cuda_new, 'N', 'total step')
     _, y_cuda_new_linsolve = parse_output(output_cuda_new, 'N', 'lin_solve')
     _, y_cuda_new_advect = parse_output(output_cuda_new, 'N', 'advect')
     _, y_cuda_new_project = parse_output(output_cuda_new, 'N', 'project')
-    _, y_cuda_new_project = parse_output(output_cuda_new, 'N', 'add_source')
+    _, y_cuda_new_source = parse_output(output_cuda_new, 'N', 'add_source')
+    _, y_cuda_new_cpy_async = parse_output(output_cuda_new, 'N', 'CUDA copy async')
+
+    # Data second parallel model + fp16
+    output_cuda_new_fp16 = Path('./output_cuda_new_fp16')
+    _, y_cuda_new_fp16_total = parse_output(output_cuda_new_fp16, 'N', 'total step')
+    _, y_cuda_new_fp16_linsolve = parse_output(output_cuda_new_fp16, 'N', 'lin_solve')
 
 
     # Fit parameters of sequential analytical model
@@ -139,27 +149,54 @@ def plot():
     # Parameters of parallel model
     ls_cuda_c = np.mean([y*nn / (20*nn*nn) for y, nn in zip(y_cuda_linsolve, n)])
     ls_cuda_fp16_c = np.mean([y*p / (20*nn*nn) for p, y, nn in zip(P, y_cuda_fp16_linsolve, n)])
-    cpy_cuda_c = np.mean([0.0000172542, 0.0000131765, 0.0000106673, 0.0000090736, 0.0000080918, 0.0000074619, 0.0000070025, 0.0000079454, 0.0000082313])
+    cpy_cuda_c = np.mean(y_cuda_cpy)
 
     # ls_cuda_c benchmark includes copies, so we remove those here
     ls_cuda_c -= 2*cpy_cuda_c
 
     print(f'Parameters CUDA: \n\tls_cuda_c: {ls_cuda_c}\n\tls_cuda_fp16_c:{ls_cuda_fp16_c}\n\tcpy_cuda_c:{cpy_cuda_c}')
 
+    ls_cuda_new_c = np.mean([y / 20 for y in y_cuda_new_linsolve])
+    proj_cuda_new_c = np.mean([(y - ls_cuda_new_c) / 2  for y in y_cuda_new_project])
+    src_cuda_new_c = np.mean(y_cuda_new_source)
+    adv_cuda_new_c = np.mean(y_cuda_new_advect)
+    cpy_cuda_new_c = np.mean(y_cuda_new_cpy_async)
+    
+    ls_cuda_new_fp16_c = np.mean([y / 20 for y in y_cuda_new_fp16_linsolve])
+    print(f'Parameters CUDA v2: \n\t'
+          f'ls_cuda_c: {ls_cuda_new_c}\n\t'
+          f'ls_cuda_new_fp16_c:{ls_cuda_new_fp16_c}\n\t'
+          f'proj_cuda_new_c:{proj_cuda_new_c}\n\t'
+          f'src_cuda_new_c:{src_cuda_new_c}\n\t'
+          f'adv_cuda_new_c:{adv_cuda_new_c}\n\t'
+          f'cpy_cuda_new_c:{cpy_cuda_new_c}')
+
+
     # Speedup
     speedup = y_total[-1] / y_cuda_total[-1]
-    speedup_fp16 = y_total[-1] / y_cuda_fp16_total[-1]
+    speedup_fp16 = y_total[-1] / y_cuda_new_fp16_total[-1]
+    speedup_new = y_total[-1] / y_cuda_new_total[-1]
     print(f'Speedup n={n[-1]} x{speedup}')
+    print(f'Speedup v2 n={n[-1]} x{speedup_new}')
     print(f'Speedup fp16 n={n[-1]} x{speedup_fp16}')
     
     plt.figure()
     plt.scatter(n, y_total, label='Sequential')
     plt.scatter(n, y_cuda_total, label='CUDA')
-    # plt.scatter(n, y_cuda_fp16_total, label='CUDA FP16')
+    plt.scatter(n, y_cuda_new_total, label='CUDA v2')
+    # plt.scatter(n, y_cuda_new_fp16_total, label='CUDA v2 FP16')
     plt.plot(n, [total(nn, adv_c, src_c, proj_c, ls_c) for nn in n], label='Sequential Model')
-    plt.plot(n, [total_cuda_1(nn, adv_c, src_c, proj_c, ls_cuda_c, cpy_cuda_c, nn) for nn in n], label='CUDA Model')
+    plt.plot(n, [total_cuda(nn, adv_c, src_c, proj_c, ls_cuda_c, cpy_cuda_c, nn) for nn in n], label='CUDA Model')
+    plt.plot(n, [total_cuda_new(nn, adv_cuda_new_c, src_cuda_new_c, proj_cuda_new_c, ls_cuda_new_c, cpy_cuda_new_c, nn*nn) for nn in n], label='CUDA Model v2')
     # plt.plot(n, [total(nn, adv_c, src_c, proj_c, ls_cuda_fp16_c, p) for nn, p in zip(n, P)], label='CUDA FP16 Model')
     
+    # Find value of N where fps < 60
+    for z in range(1, 4000):
+        step_time = total_cuda_new(z, adv_cuda_new_c, src_cuda_new_c, proj_cuda_new_c, ls_cuda_new_c, cpy_cuda_new_c, z*z)
+        if step_time > 16.7:
+            print(z)
+            break
+
     # plt.plot(n, y_advect, label='advect')
     # plt.plot(n, [advect(nn, adv_c) for nn in n], label='advect fit')
     
