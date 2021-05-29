@@ -66,8 +66,6 @@ static void free_cuda_data(void)
 static void clear_data(void)
 {
 	int i, size = (N + 2) * (N + 2);
-	int bytes = size * sizeof(fluid);
-
 	for (i = 0; i < size; i++)
 	{
 		u[i] = v[i] = u_prev[i] = v_prev[i] = dens[i] = dens_prev[i] = 0.0f;

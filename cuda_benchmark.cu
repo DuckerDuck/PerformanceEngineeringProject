@@ -176,6 +176,8 @@ static void benchmark(int file_N)
 	clear_data();
 
 	printf("N: %d, ", N);
+	int size = (N + 2) * (N + 2);
+	int bytes = size * sizeof(fluid);
 
 	for (int r = 0; r < runs; r++)
 	{	
@@ -227,23 +229,22 @@ static void benchmark(int file_N)
 		end_time = get_time();
 		add_source_time += end_time - start_time;
 
-		int size = (N + 2) * (N + 2) * sizeof(fluid);
 		start_time = get_time();
 		for (s = 0; s < steps; s++)
 		{
-			checkCuda(cudaMemcpy(gpu.dens, dens, size, cudaMemcpyHostToDevice));
-			checkCuda(cudaMemcpy(gpu.dens_prev, dens_prev, size, cudaMemcpyHostToDevice));
-			checkCuda(cudaMemcpy(gpu.u, u, size, cudaMemcpyHostToDevice));
-			checkCuda(cudaMemcpy(gpu.u_prev, u_prev, size, cudaMemcpyHostToDevice));
-			checkCuda(cudaMemcpy(gpu.v, v, size, cudaMemcpyHostToDevice));
-			checkCuda(cudaMemcpy(gpu.v_prev, v_prev, size, cudaMemcpyHostToDevice));
+			checkCuda(cudaMemcpy(gpu.dens, dens, bytes, cudaMemcpyHostToDevice));
+			checkCuda(cudaMemcpy(gpu.dens_prev, dens_prev, bytes, cudaMemcpyHostToDevice));
+			checkCuda(cudaMemcpy(gpu.u, u, bytes, cudaMemcpyHostToDevice));
+			checkCuda(cudaMemcpy(gpu.u_prev, u_prev, bytes, cudaMemcpyHostToDevice));
+			checkCuda(cudaMemcpy(gpu.v, v, bytes, cudaMemcpyHostToDevice));
+			checkCuda(cudaMemcpy(gpu.v_prev, v_prev, bytes, cudaMemcpyHostToDevice));
 
-			checkCuda(cudaMemcpy(dens, gpu.dens, size, cudaMemcpyDeviceToHost));
-			checkCuda(cudaMemcpy(dens_prev, gpu.dens_prev, size, cudaMemcpyDeviceToHost));
-			checkCuda(cudaMemcpy(u, gpu.u, size, cudaMemcpyDeviceToHost));
-			checkCuda(cudaMemcpy(u_prev, gpu.u_prev, size, cudaMemcpyDeviceToHost));
-			checkCuda(cudaMemcpy(v, gpu.v, size, cudaMemcpyDeviceToHost));
-			checkCuda(cudaMemcpy(v_prev, gpu.v_prev, size, cudaMemcpyDeviceToHost));
+			checkCuda(cudaMemcpy(dens, gpu.dens, bytes, cudaMemcpyDeviceToHost));
+			checkCuda(cudaMemcpy(dens_prev, gpu.dens_prev, bytes, cudaMemcpyDeviceToHost));
+			checkCuda(cudaMemcpy(u, gpu.u, bytes, cudaMemcpyDeviceToHost));
+			checkCuda(cudaMemcpy(u_prev, gpu.u_prev, bytes, cudaMemcpyDeviceToHost));
+			checkCuda(cudaMemcpy(v, gpu.v, bytes, cudaMemcpyDeviceToHost));
+			checkCuda(cudaMemcpy(v_prev, gpu.v_prev, bytes, cudaMemcpyDeviceToHost));
 		}
 		end_time = get_time();
 		cuda_copy += end_time - start_time;
@@ -251,20 +252,20 @@ static void benchmark(int file_N)
 		start_time = get_time();
 		for (s = 0; s < steps; s++)
 		{
-			checkCuda(cudaMemcpyAsync(gpu.dens, dens, size, cudaMemcpyHostToDevice));
-			checkCuda(cudaMemcpyAsync(gpu.dens_prev, dens_prev, size, cudaMemcpyHostToDevice));
-			checkCuda(cudaMemcpyAsync(gpu.u, u, size, cudaMemcpyHostToDevice));
-			checkCuda(cudaMemcpyAsync(gpu.u_prev, u_prev, size, cudaMemcpyHostToDevice));
-			checkCuda(cudaMemcpyAsync(gpu.v, v, size, cudaMemcpyHostToDevice));
-			checkCuda(cudaMemcpyAsync(gpu.v_prev, v_prev, size, cudaMemcpyHostToDevice));
+			checkCuda(cudaMemcpyAsync(gpu.dens, dens, bytes, cudaMemcpyHostToDevice));
+			checkCuda(cudaMemcpyAsync(gpu.dens_prev, dens_prev, bytes, cudaMemcpyHostToDevice));
+			checkCuda(cudaMemcpyAsync(gpu.u, u, bytes, cudaMemcpyHostToDevice));
+			checkCuda(cudaMemcpyAsync(gpu.u_prev, u_prev, bytes, cudaMemcpyHostToDevice));
+			checkCuda(cudaMemcpyAsync(gpu.v, v, bytes, cudaMemcpyHostToDevice));
+			checkCuda(cudaMemcpyAsync(gpu.v_prev, v_prev, bytes, cudaMemcpyHostToDevice));
 			cudaDeviceSynchronize();
 
-			checkCuda(cudaMemcpyAsync(dens, gpu.dens, size, cudaMemcpyDeviceToHost));
-			checkCuda(cudaMemcpyAsync(dens_prev, gpu.dens_prev, size, cudaMemcpyDeviceToHost));
-			checkCuda(cudaMemcpyAsync(u, gpu.u, size, cudaMemcpyDeviceToHost));
-			checkCuda(cudaMemcpyAsync(u_prev, gpu.u_prev, size, cudaMemcpyDeviceToHost));
-			checkCuda(cudaMemcpyAsync(v, gpu.v, size, cudaMemcpyDeviceToHost));
-			checkCuda(cudaMemcpyAsync(v_prev, gpu.v_prev, size, cudaMemcpyDeviceToHost));
+			checkCuda(cudaMemcpyAsync(dens, gpu.dens, bytes, cudaMemcpyDeviceToHost));
+			checkCuda(cudaMemcpyAsync(dens_prev, gpu.dens_prev, bytes, cudaMemcpyDeviceToHost));
+			checkCuda(cudaMemcpyAsync(u, gpu.u, bytes, cudaMemcpyDeviceToHost));
+			checkCuda(cudaMemcpyAsync(u_prev, gpu.u_prev, bytes, cudaMemcpyDeviceToHost));
+			checkCuda(cudaMemcpyAsync(v, gpu.v, bytes, cudaMemcpyDeviceToHost));
+			checkCuda(cudaMemcpyAsync(v_prev, gpu.v_prev, bytes, cudaMemcpyDeviceToHost));
 			cudaDeviceSynchronize();
 		}
 		end_time = get_time();
@@ -277,15 +278,15 @@ static void benchmark(int file_N)
 	double step_time_lin_solve_s = (lin_solve_time / (runs * steps));
 	double step_time_add_source_s = (add_source_time / (runs * steps));
 	double step_time_project_s = (project_time / (runs * steps));
-	double step_time_cuda_copy_s = (cuda_copy / (runs * steps));
-	double step_time_cuda_copy_async_s = (cuda_copy_async / (runs * steps));
+	double step_time_cuda_copy_s = (cuda_copy / (runs * steps * 6 * size));	
+	double step_time_cuda_copy_async_s = (cuda_copy_async / (runs * steps * 6 * size));
 	printf("total: %lf s, total step: %lf ms, frames per second: %lf, ", total_time, step_time_total_s * 1e3, 1.0 / step_time_total_s);
 	printf("advect: %lf ms, ", step_time_advect_s * 1e3);
 	printf("lin_solve: %lf ms, ", step_time_lin_solve_s * 1e3);
 	printf("add_source: %lf ms, ", step_time_add_source_s * 1e3);
 	printf("threads: %d, ", (int)(N / (float)BLOCKSIZE));
-	printf("CUDA copy: %lf ms, ", step_time_cuda_copy_s * 1e3);
-	printf("CUDA copy async: %lf ms, ", step_time_cuda_copy_async_s * 1e3);
+	printf("CUDA copy: %.10lf ms, ", step_time_cuda_copy_s * 1e3);
+	printf("CUDA copy async: %.10lf ms, ", step_time_cuda_copy_async_s * 1e3);
 	printf("project: %lf ms \n", step_time_project_s * 1e3);
 }
 
