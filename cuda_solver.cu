@@ -16,19 +16,19 @@ void checkCuda(cudaError_t result)
 
 __global__ void lin_solve_kernel(int N, fluid *x, fluid *x0, float a, float c) 
 {
-	int i = blockDim.x * blockIdx.x + threadIdx.x;
-	int j;
+	// int i = blockDim.x * blockIdx.x + threadIdx.x;
+	// int j;
+	int i = threadIdx.x + blockIdx.x * blockDim.x; 
+	int j = threadIdx.y + blockIdx.y * blockDim.y; 
 	fluid tmp = 0;
 	
-	// i starts at 1
+	// i and j start at 1
 	i += 1;
-	
-	if (i <= N) {
-		for (j = 1; j <= N; j++) 
-		{
-			tmp = (x0[IX(i, j)] + a * (x[IX(i - 1, j)] + x[IX(i + 1, j)] + x[IX(i, j - 1)] + x[IX(i, j + 1)]));
-			x[IX(i, j)] = tmp / c;
-		}
+	j += 1;
+
+	if (i <= N && j <= N) {
+		tmp = (x0[IX(i, j)] + a * (x[IX(i - 1, j)] + x[IX(i + 1, j)] + x[IX(i, j - 1)] + x[IX(i, j + 1)]));
+		x[IX(i, j)] = tmp / c;
 	}
 }
 
@@ -90,7 +90,9 @@ void lin_solve_cuda(int N, int b, fluid *x, fluid *x0, float a, float c)
 
 	for (k = 0; k < 20; k++)
 	{
-		LINSOLVE_KERNEL<<<N/BLOCKSIZE + 1, BLOCKSIZE>>>(N, x, x0, a, c);
+		dim3 dimBlock(BLOCKSIZE, BLOCKSIZE);
+    	dim3 dimGrid(N/BLOCKSIZE + 1, N/BLOCKSIZE + 1);
+		LINSOLVE_KERNEL<<<dimGrid, dimBlock>>>(N, x, x0, a, c);
 		checkCuda(cudaGetLastError());
 		
 		// No parallelization here, this simply prevents us from 
@@ -108,38 +110,40 @@ void diffuse_cuda(int N, int b, fluid *x, fluid *x0, float diff, float dt)
 }
 
 __global__ void project_cuda_kernel_a(int N, fluid *u, fluid *v, fluid *u0, fluid *v0) {
-	int i = blockDim.x * blockIdx.x + threadIdx.x;
-	int j;
-	// i starts at 1
-	i += 1;
+	int i = threadIdx.x + blockIdx.x * blockDim.x; 
+	int j = threadIdx.y + blockIdx.y * blockDim.y; 
 	
-	if (i <= N) {
-		for (j = 1; j <= N; j++) 
-		{
-			v0[IX(i, j)] = -0.5f * (u[IX(i + 1, j)] - u[IX(i - 1, j)] + v[IX(i, j + 1)] - v[IX(i, j - 1)]) / N;
-			u0[IX(i, j)] = 0;
-		}
+	// i and j start at 1
+	i += 1;
+	j += 1;
+	
+	if (i <= N && j <= N)
+	{
+		v0[IX(i, j)] = -0.5f * (u[IX(i + 1, j)] - u[IX(i - 1, j)] + v[IX(i, j + 1)] - v[IX(i, j - 1)]) / N;
+		u0[IX(i, j)] = 0;
 	}
 }
 
 __global__ void project_cuda_kernel_b(int N, fluid *u, fluid *v, fluid *p) {
-	int i = blockDim.x * blockIdx.x + threadIdx.x;
-	int j;
-	// i starts at 1
-	i += 1;
+	int i = threadIdx.x + blockIdx.x * blockDim.x; 
+	int j = threadIdx.y + blockIdx.y * blockDim.y; 
 	
-	if (i <= N) {
-		for (j = 1; j <= N; j++) 
-		{
-			u[IX(i, j)] -= 0.5f * N * (p[IX(i + 1, j)] - p[IX(i - 1, j)]);
-			v[IX(i, j)] -= 0.5f * N * (p[IX(i, j + 1)] - p[IX(i, j - 1)]);
-		}
+	// i and j start at 1
+	i += 1;
+	j += 1;
+	
+	if (i <= N && j <= N)
+	{
+		u[IX(i, j)] -= 0.5f * N * (p[IX(i + 1, j)] - p[IX(i - 1, j)]);
+		v[IX(i, j)] -= 0.5f * N * (p[IX(i, j + 1)] - p[IX(i, j - 1)]);
 	}
 }
 
 void project_cuda(int N, fluid *u, fluid *v, fluid *p, fluid *div)
 {
-	project_cuda_kernel_a<<<N/BLOCKSIZE + 1, BLOCKSIZE>>>(N, u, v, p, div);
+	dim3 dimBlock(BLOCKSIZE, BLOCKSIZE);
+	dim3 dimGrid(N/BLOCKSIZE + 1, N/BLOCKSIZE + 1);
+	project_cuda_kernel_a<<<dimGrid, dimBlock>>>(N, u, v, p, div);
 	checkCuda(cudaGetLastError());
 
 	set_bnd_cuda(N, 0, div);
@@ -147,7 +151,7 @@ void project_cuda(int N, fluid *u, fluid *v, fluid *p, fluid *div)
 	
 	lin_solve_cuda(N, 0, p, div, 1, 4);
 
-	project_cuda_kernel_b<<<N/BLOCKSIZE + 1, BLOCKSIZE>>>(N, u, v, p);
+	project_cuda_kernel_b<<<dimGrid, dimBlock>>>(N, u, v, p);
 	checkCuda(cudaGetLastError());
 
 	set_bnd_cuda(N, 1, u);
@@ -156,44 +160,47 @@ void project_cuda(int N, fluid *u, fluid *v, fluid *p, fluid *div)
 
 __global__ void advect_kernel(int N, fluid *d, fluid *d0, fluid *u, fluid *v, float dt)
 {
-	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	int i = threadIdx.x + blockIdx.x * blockDim.x; 
+	int j = threadIdx.y + blockIdx.y * blockDim.y; 
 	
-	int j, i0, j0, i1, j1;
+	int i0, j0, i1, j1;
 	float x, y, s0, t0, s1, t1, dt0;
 	dt0 = dt * N;
-	// i starts at 1
+	// i and j start at 1
 	i += 1;
+	j += 1;
 	
-	if (i <= N) {
-		for (j = 1; j <= N; j++) 
-		{
-			x = i - dt0 * u[IX(i, j)];
-			y = j - dt0 * v[IX(i, j)];
-			if (x < 0.5f)
-				x = 0.5f;
-			if (x > N + 0.5f)
-				x = N + 0.5f;
-			i0 = (int)x;
-			i1 = i0 + 1;
-			if (y < 0.5f)
-				y = 0.5f;
-			if (y > N + 0.5f)
-				y = N + 0.5f;
-			j0 = (int)y;
-			j1 = j0 + 1;
-			s1 = x - i0;
-			s0 = 1 - s1;
-			t1 = y - j0;
-			t0 = 1 - t1;
-			d[IX(i, j)] = s0 * (t0 * d0[IX(i0, j0)] + t1 * d0[IX(i0, j1)]) +
-						  s1 * (t0 * d0[IX(i1, j0)] + t1 * d0[IX(i1, j1)]);
-		}
+	if (i <= N && j <= N) 
+	{
+		x = i - dt0 * u[IX(i, j)];
+		y = j - dt0 * v[IX(i, j)];
+		if (x < 0.5f)
+			x = 0.5f;
+		if (x > N + 0.5f)
+			x = N + 0.5f;
+		i0 = (int)x;
+		i1 = i0 + 1;
+		if (y < 0.5f)
+			y = 0.5f;
+		if (y > N + 0.5f)
+			y = N + 0.5f;
+		j0 = (int)y;
+		j1 = j0 + 1;
+		s1 = x - i0;
+		s0 = 1 - s1;
+		t1 = y - j0;
+		t0 = 1 - t1;
+		d[IX(i, j)] = s0 * (t0 * d0[IX(i0, j0)] + t1 * d0[IX(i0, j1)]) +
+						s1 * (t0 * d0[IX(i1, j0)] + t1 * d0[IX(i1, j1)]);
 	}
+	
 }
 
 void advect_cuda(int N, int b, fluid *d, fluid *d0, fluid *u, fluid *v, float dt)
 {
-	advect_kernel<<<N/BLOCKSIZE + 1, BLOCKSIZE>>>(N, d, d0, u, v, dt);
+	dim3 dimBlock(BLOCKSIZE, BLOCKSIZE);
+	dim3 dimGrid(N/BLOCKSIZE + 1, N/BLOCKSIZE + 1);
+	advect_kernel<<<dimGrid, dimBlock>>>(N, d, d0, u, v, dt);
 	checkCuda(cudaGetLastError());
 
 	set_bnd_cuda(N, b, d);
