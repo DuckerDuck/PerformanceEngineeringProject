@@ -35,8 +35,8 @@ cuda-benchmark: cuda_solver.o solver.o cuda_benchmark.o
 cuda-demo: cuda_solver.o solver.o cuda_demo.o io.o
 	$(NVCC) $^ -o $@ $(LFLAGS)
 
-accuracy: accuracy.c solver.c io.c
-	$(CC) $(CFLAGS)  -o $@ $^ $(LFLAGS)
+accuracy: cuda_solver.o solver.o accuracy.o io.o
+	$(NVCC) $^ -o $@
 
 .PHONY: clean
 clean:
