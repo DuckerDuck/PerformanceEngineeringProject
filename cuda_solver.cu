@@ -51,8 +51,7 @@ __global__ void lin_solve_kernel_half(int N, fluid *x, fluid *x0, float a, float
 		p = __float2half(x[IX(i, j + 1)]);
 		// tmp = k + ha * (l + m + o + p);
 		tmp = __hfma(ha, __hadd(__hadd(__hadd(l, m), o), p), k);
-		
-		x[IX(i, j)] = __half2float(tmp / ca);
+		x[IX(i, j)] = __half2float(__hdiv(tmp, ca));
 	}
 }
 

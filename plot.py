@@ -2,8 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 
-from numpy.lib.function_base import copy
-
 
 def parse_output(file: Path, x_key='N', y_key='time per step'):
 
@@ -164,7 +162,7 @@ def plot():
     
     ls_cuda_new_fp16_c = np.mean([y / 20 for y in y_cuda_new_fp16_linsolve])
     print(f'Parameters CUDA v2: \n\t'
-          f'ls_cuda_c: {ls_cuda_new_c}\n\t'
+          f'ls_cuda_new_c: {ls_cuda_new_c}\n\t'
           f'ls_cuda_new_fp16_c:{ls_cuda_new_fp16_c}\n\t'
           f'proj_cuda_new_c:{proj_cuda_new_c}\n\t'
           f'src_cuda_new_c:{src_cuda_new_c}\n\t'
@@ -188,26 +186,13 @@ def plot():
     plt.plot(n, [total(nn, adv_c, src_c, proj_c, ls_c) for nn in n], label='Sequential Model')
     plt.plot(n, [total_cuda(nn, adv_c, src_c, proj_c, ls_cuda_c, cpy_cuda_c, nn) for nn in n], label='CUDA Model')
     plt.plot(n, [total_cuda_new(nn, adv_cuda_new_c, src_cuda_new_c, proj_cuda_new_c, ls_cuda_new_c, cpy_cuda_new_c, nn*nn) for nn in n], label='CUDA Model v2')
-    # plt.plot(n, [total(nn, adv_c, src_c, proj_c, ls_cuda_fp16_c, p) for nn, p in zip(n, P)], label='CUDA FP16 Model')
-    
-    # Find value of N where fps < 60
-    for z in range(1, 4000):
-        step_time = total_cuda_new(z, adv_cuda_new_c, src_cuda_new_c, proj_cuda_new_c, ls_cuda_new_c, cpy_cuda_new_c, z*z)
-        if step_time > 16.7:
-            print(z)
-            break
 
-    # plt.plot(n, y_advect, label='advect')
-    # plt.plot(n, [advect(nn, adv_c) for nn in n], label='advect fit')
-    
-    # plt.plot(n, y_linsolve, label='lin_solve')
-    # plt.plot(n, [lin_solve(nn, ls_c) for nn in n], label='lin_solve fit')
-    
-    # plt.plot(n, y_project, label='project')
-    # plt.plot(n, [project(nn, ls_c, proj_c) for nn in n], label='project fit')
-    
-    # plt.plot(n, y_source, label='add_source')
-    # plt.plot(n, [add_source(nn, src_c) for nn in n], label='add_source fit')
+    # Find 60 FPS gridsize limit
+    for grid in range(1, 5000):
+        step_time = total_cuda_new(grid, adv_cuda_new_c, src_cuda_new_c, proj_cuda_new_c, ls_cuda_new_c, cpy_cuda_new_c, grid*grid)
+        if step_time > 16.7:
+            print('Maximum grid size @ 60 FPS:', grid)
+            break
     
     # Plot what we want
     plt.plot(n, [16.7] * len(n), label='60 FPS', linestyle='--')
@@ -215,6 +200,7 @@ def plot():
 
     plt.ylabel('Step time (ms)')
     plt.xlabel('Grid size (N)')
+    plt.ylim(0, 400)
     plt.xticks(n, n)
     plt.legend()
     plt.tight_layout()
@@ -222,15 +208,27 @@ def plot():
 
     # plot for required p value
     plt.figure()
-    P = np.arange(1, 100)
+    P = np.arange(1, 1000)
     plt.plot(P, [total(1080, adv_c, src_c, proj_c, ls_cuda_c, p) for p in P], label='CUDA Model, N=1080')
 
     plt.plot(P, [16.7] * len(P), label='60 FPS', linestyle='--')
     plt.ylabel('Step time (ms)')
     plt.xlabel('Threads')
+    plt.ylim(-100, 1000)
     plt.legend()
     plt.tight_layout()
     plt.savefig('parallel.png')
+
+    # plot for half precision accuracy
+    plt.figure()
+    mse = [0.000000, 0.000001, 0.000002, 0.000004, 0.000004, 0.000006, 0.000008, 0.000013, 0.000022, 0.000035, 0.000053, 0.000076, 0.000114, 0.000141, 0.000222, 0.000244, 0.000263, 0.000279, 0.000362, 0.000465, 0.000571, 0.000819, 0.000973, 0.001256, 0.001577, 0.001916, 0.002251, 0.003209, 0.004431, 0.004775, 0.005578, 0.006325, 0.008477, 0.009638, 0.010948, 0.014514, 0.016616, 0.019748, 0.022303, 0.024529, 0.034824, 0.042314, 0.050466, 0.064348, 0.082271, 0.104473, 0.133356, 0.171123, 0.204111, 0.256029]
+    steps = np.arange(1, 51)
+    plt.plot(steps, mse)
+
+    plt.ylabel('MSE')
+    plt.xlabel('Steps')
+    plt.tight_layout()
+    plt.savefig('accuracy.png')
 
 
 if __name__ == '__main__':
