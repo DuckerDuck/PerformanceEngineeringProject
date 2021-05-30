@@ -103,7 +103,7 @@ def total_cuda_new(n, adv_c, src_c, proj_c, ls_c, cpy_c, p):
 def plot():
     plt.rcParams.update({'font.size': 12})
     
-    output = Path('./output')
+    output = Path('./results/output')
     n, y_total = parse_output(output, 'N', 'total step')
     _, y_advect = parse_output(output, 'N', 'advect')
     _, y_linsolve = parse_output(output, 'N', 'lin_solve')
@@ -111,17 +111,17 @@ def plot():
     _, y_source = parse_output(output, 'N', 'add_source')
     
     # Data first parallel model
-    output_cuda = Path('./output_cuda')
+    output_cuda = Path('./results/output_cuda')
     P, y_cuda_total = parse_output(output_cuda, 'threads', 'total step')
     _, y_cuda_linsolve = parse_output(output_cuda, 'threads', 'lin_solve')
 
     # Data first parallel model + fp16
-    _, y_cuda_fp16_total = parse_output(Path('./output_cuda_fp16'), 'threads', 'total step')
-    _, y_cuda_fp16_linsolve = parse_output(Path('./output_cuda_fp16'), 'threads', 'lin_solve')
+    _, y_cuda_fp16_total = parse_output(Path('./results/output_cuda_fp16'), 'threads', 'total step')
+    _, y_cuda_fp16_linsolve = parse_output(Path('./results/output_cuda_fp16'), 'threads', 'lin_solve')
 
 
     # Data fully parallel model + async memory transfers
-    output_cuda_new = Path('./output_cuda_new_3')
+    output_cuda_new = Path('./results/output_cuda_new_3')
     _, y_cuda_cpy = parse_output(output_cuda_new, 'N', 'CUDA copy')
     
     _, y_cuda_new_total = parse_output(output_cuda_new, 'N', 'total step')
@@ -132,7 +132,7 @@ def plot():
     _, y_cuda_new_cpy_async = parse_output(output_cuda_new, 'N', 'CUDA copy async')
 
     # Data second parallel model + fp16
-    output_cuda_new_fp16 = Path('./output_cuda_new_fp16')
+    output_cuda_new_fp16 = Path('./results/output_cuda_new_fp16')
     _, y_cuda_new_fp16_total = parse_output(output_cuda_new_fp16, 'N', 'total step')
     _, y_cuda_new_fp16_linsolve = parse_output(output_cuda_new_fp16, 'N', 'lin_solve')
 
