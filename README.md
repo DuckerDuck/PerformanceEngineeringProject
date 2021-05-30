@@ -59,7 +59,7 @@ The `accuracy` application requires data from the `inputs/` and `outputs/` folde
 ```
 
 ## Plots
-The `plots.py` file will generate all plots from the report and print out all benchmarked parameters of the analytical models.
+The `plot.py` file will generate all plots from the report and print out all benchmarked parameters of the analytical models.
 ```bash
-python3 plots.py
+python3 plot.py
 ```
